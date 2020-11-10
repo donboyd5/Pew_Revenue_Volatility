@@ -9,6 +9,7 @@ output:
     fig_width: 8
     toc: yes
     toc_depth: 3
+    toc_float: true
     number_sections: yes
 editor_options:
   chunk_output_type: inline
@@ -58,56 +59,6 @@ The general workflow when working with renv is:
 -->
 
 
-# Introduction
-
-Goals and issues
-
-* Ways to measure tax revenue volatility
-
-* Recent trends in revenue volatility
-    +  Has tax revenue become more volatile over time?
-    +  If so, why?
-
-* Drivers of state revenue volatility - to what extent driven by
-    +  The nature of national economic changes (e.g., characteristics of recession)?
-    +  State economic structure?
-    +  State tax structure? 
-         +  The portfolio of taxes? 
-         +  The structure of individual taxes?
-
-*	Implications for states in current recession and beyond
-    +  What does the Covid-19 recession imply for state tax volatility?
-    +  How much can states reduce volatility with alternative tax structures?
-
-
-# Ways to measure tax revenue volatility
-
-
-
-# Recent trends in revenue volatility
-
-
-# Drivers of state revenue volatility
-
-## The nature of national economic changes
-
-## State economic structure
-
-## State tax structure
-
-### The portfolio of state taxes
-
-### The structure of individual taxes
-
-
-#	Implications for states in current recession and beyond
-
-## Special characteristics of the Covid-19 recession and state tax volatility
-
-## How much can states reduce volatility with alternative tax structures?
-
-
-
 <!-- I put this section after first slide header or else beamer adds a blank slide
 
 "`r format(Sys.time(), '%B %d, %Y')`"
@@ -115,11 +66,11 @@ Goals and issues
 -->
 
 
-```{r notes, eval=FALSE}
+```{r renv_notes, eval=FALSE}
 # install local packages
-pkgdir <- r"(C:\RPrograms PC\ProjectsCurrent\Pew_Revenue_Volatility\renv\local\)"
-pkgs <- c("bdata_0.6.tar.gz", "BEAData_0.6.0.tar.gz", "btools_0.9.tar.gz")
-install.packages(paste0(pkgdir, pkgs[3]), repos=NULL, type="source")
+# pkgdir <- r"(C:\RPrograms PC\ProjectsCurrent\Pew_Revenue_Volatility\renv\local\)"
+# pkgs <- c("bdata_0.6.tar.gz", "BEAData_0.6.0.tar.gz", "btools_0.9.tar.gz")
+# install.packages(paste0(pkgdir, pkgs[3]), repos=NULL, type="source")
 
 # to get it all started:
 # renv::init()
@@ -145,9 +96,6 @@ source(here::here("r", "libs_base.r"))
 source(here::here("r", "functions.r"))
 devtools::session_info()
 
-
-
-
 ```
 
 
@@ -166,6 +114,56 @@ sgt1 <- sgtax.a %>%
          sd10=rollsd_p(vpch, 10),
          sd10c=rollsd_p2(vpch, 10)) # population sd
 ```
+
+
+
+
+# Goals and issues
+
+* Ways to measure tax revenue volatility
+
+* Recent trends in revenue volatility
+    +  Has tax revenue become more volatile over time?
+    +  If so, why?
+
+* Drivers of state revenue volatility - to what extent driven by
+    +  The nature of national economic changes (e.g., characteristics of recession)?
+    +  State economic structure?
+    +  State tax structure? 
+         +  The portfolio of taxes? 
+         +  The structure of individual taxes?
+
+*	Implications for states in current recession and beyond
+    +  What does the Covid-19 recession imply for state tax volatility?
+    +  How much can states reduce volatility with alternative tax structures?
+
+
+# Ways to measure tax revenue volatility
+
+
+# Recent trends in revenue volatility
+
+
+# Drivers of state revenue volatility
+
+## The nature of national economic changes
+
+## State economic structure
+
+## State tax structure
+
+### The portfolio of state taxes
+
+### The structure of individual taxes
+
+
+#	Implications for states in current recession and beyond
+
+## Special characteristics of the Covid-19 recession and state tax volatility
+
+## How much can states reduce volatility with alternative tax structures?
+
+
 
 
 # Appendix
