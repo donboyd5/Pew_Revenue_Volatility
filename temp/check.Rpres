@@ -1,0 +1,234 @@
+
+Methods review presentation
+========================================================
+author: Don Boyd
+date: `r format(Sys.time(), '%B %d, %Y')`
+autosize: true
+css: djb.css
+
+<!-- 
+autosize: true
+
+width: 1440
+height: 900
+
+css: djb.css
+
+-->
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache=TRUE)
+```
+
+
+Tax revenue volatility and its impacts on state governments
+========================================================
+
+Provide deep and broad understanding of:
+
+- Ways to measure revenue volatility
+- Recent trends in revenue volatility
+- Drivers of state revenue volatility
+-	Implications for states in next recession
+
+Ultimate goal: Insights that can help policymakers manage budgets
+
+Overall plan
+========================================================
+
+1. Review relevant literature thoroughly
+2. Build database for analyzing volatility
+    + Annual state tax revenue, all states, by tax
+    + Auxilliary data to allow population, inflation adjustment
+    + Selected other data
+3. Muliple methods
+    + Descriptive analytic review of history
+    + Decomposition and simulation of impacts:
+      + Alternative economic structures
+    + Simulations of portfolio effects
+    + Econometrics will be a part of this, but just a part
+
+Core data source
+========================================================
+
+* Census Bureau Annual Survey of State Finances
+  + State tax revenue, annual, all states, many taxes
+  + Some annual data as early as mid-1950s
+  + Includes recessions:
+      + 1980-81, 1990, 2001, and 2007
+      + may be able to include 1960, 1969, 1973 recessions
+  + Note: This is *NOT* the same as state general fund tax revenue, for good reasons
+  
+A few questions about the core data source (1)
+========================================================
+
+* How much data?
+  + ~60 years x 50 states x ~25 tax types (collapsed down to ~5)
+  + ~15k year-state-tax observations after collapsing
+  
+* Why annual?
+  + It is the major policy making cycle for states
+  + Intra-year volatility does matter, but not as much
+  + Good data are available
+  
+A few questions about the core data source (2)
+========================================================
+
+* Why not general fund?
+  + Often much smaller than total tax revenue
+  + Only captures some of the relevant volatility
+  + Not consistent across states or over time
+  + Not good data
+  
+* Why not fees?
+  + Generally not as volatile as tax revenue
+  + Much smaller than tax revenue (less budgetary importance)
+  + Hard to measure, not good data
+  
+Auxilliary data sources
+========================================================
+
+* Census Bureau annual state population data for per-capita adjustment
+* Bureau of Economic Analysis (BEA): GDP price index
+  +  National, annual
+  +  For price adjustment
+* Pew state tax policy adjustments
+  +  Only available for a subset of relevant time periods and taxes
+  +  Noisy
+  +  Main purpose is to learn/identify how much our view of volatility changes if we adjust for policy changes.
+* BEA state gross domestic product, industrial detail, annual
+  +  For analyzing importance of differences in industrial composition
+  +  Especially during recessions
+  +  Not available for all years (SIC --> NAICS)
+  
+Potential additional data sources
+========================================================
+
+* BEA state regional price parities, annual
+  +  Might be useful for alternative view of price adjustment
+* IRS Statistics of Income, state, annual
+  +  For components of income
+  +  Components (e.g., capital gains) can play important role in some states with income taxes
+  +  Only available for recent years (~ 2000's+)
+* State sales tax base characteristics, if practical
+  +  Potentially valuable for disentangling role of economic
+  +  Potential sources include FTA, Mikesell, or individual states
+
+Ways to measure revenue volatility (1)
+========================================================
+
+* Strengths and weaknesses of potential measures, such as
+    + Standard deviation of percent change
+    + Interquartile range of percent change
+    + Deviation from trend
+    + Others based on literature review
+
+Ways to measure revenue volatility (2)
+========================================================
+
+* Important measurement issues
+    + Adjusting for inflation
+    + Per-capita adjustment
+    + Adjusting for policy changes
+      + Will use the Pew policy-change data (only available for part of period)
+      + What questions are best addressed with these adjustments?
+      + How much does it matter?
+      + (And how good are these data for this purpose?)
+
+Recent trends in revenue volatility
+========================================================
+
+* Variation over different time periods
+* Variation across states
+* Variation across tax revenue sources
+
+Recent trends: Methods
+========================================================
+
+Drivers of state revenue volatility
+========================================================
+
+Interplay between:
+
+* Economic change
+* State economic structure
+* State tax structure
+
+Volatility drivers: Methods
+========================================================
+
+Implications for states in next recession
+========================================================
+
+* Under what circumstances might state tax revenue volatility be greater than in the past?
+* Under what circumstances might volatility be lower?
+* How might this vary with economic structure?
+* How might this vary with tax structure?
+
+Recession implications: Methods  
+========================================================
+
+* ABC
+
+There will be interesting issues to examine
+========================================================
+
+```{r include=FALSE}
+
+source(here::here("r", "libs_base.r"))
+# source(here::here("r", "libs_ts.r"))
+source(here::here("r", "functions.r"))
+
+# recessions
+
+```
+
+
+```{r}
+# prepare data
+sgt1 <- sgtax.a %>%
+  filter(stabbr=="US", vname=="tottax", year>=1950) %>%
+  mutate(vpch=pchya(value, year),
+         sd10=rollsd_p(vpch, 10),
+         sd10c=rollsd_p2(vpch, 10)) # population sd
+# ht(sgt1)
+# sgt1 %>% write_csv(here::here("test2.csv"))
+# count(sgt1, year)
+# recessions
+
+irecs <- which(recessions$year >= 1960)
+p <- sgt1 %>%
+  filter(year >= 1960) %>%
+  ggplot(aes(year, sd10)) +
+  geom_line(colour="blue") +
+  geom_point(colour="blue", size=0.75) +
+  scale_y_continuous(name="Standard deviation (%)", breaks=seq(0, 10, .5), limits=c(0, NA)) +
+  scale_x_continuous(name=NULL, breaks=seq(1960, 2030, 5)) +
+  annotate("rect",
+           xmin = recessions$peak[irecs] %>% decimal_date(),
+           xmax = recessions$trough[irecs] %>% decimal_date(),
+           fill = "lightgrey",
+           alpha = .5, # larger alpha is darker rectangle
+           ymin = -Inf, ymax = Inf) +
+  ggtitle("Volatility in aggregate state government tax revenue for the United States",
+          subtitle="Trailing 10-year standard deviation of annual % change. Recession periods are shaded.") +
+  theme_bw()
+ggsave(here::here("results", "sdus.png"), plot=p, width=16, height=12, scale=1)
+
+```
+
+
+<!--  ## Slide with R Output -->
+```{r vplot, fig.height=9, fig.width=13}
+
+# ![alt text](sdus.png)
+p
+
+```
+
+
+Concluding comments
+========================================================
+
+Ultimate goal: Provide insights that will help policymakers understand tax revenue volatility and manage its consequences for budgets.

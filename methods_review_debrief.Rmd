@@ -1,0 +1,351 @@
+---
+title: "State tax revenue volatility"
+subtitle: Methods review discussion - debrief
+author: "Don Boyd"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+  html_notebook:
+    df_print: paged
+    fig_height: 6
+    fig_width: 8
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+  html_document:
+    toc: yes
+    toc_depth: '2'
+    df_print: paged
+    number_sections: yes
+
+always_allow_html: yes
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+<!-- comments -->
+
+# Notes: Code folding, etc.
+<!--
+# code folding ----
+#   alt-L, alt-shift-L  one section
+#   alt-O, alt-shift-O  all sections
+#   alt-R run current code section (remapped from Ctrl-alt-T)
+
+# ctrl-D run current chunk
+# ctrl-R run current selection
+
+
+# renv ----
+vignette("renv")
+documentation online at https://rstudio.github.io/renv
+
+The general workflow when working with renv is:
+
+1. Call renv::init() to initialize a new project-local environment with a private R library,
+
+2. Work in the project as normal, installing and removing new R packages as they are needed in the project,
+
+3. Call renv::snapshot() to save the state of the project library to the lockfile (called renv.lock),
+
+4. Continue working on your project, installing and updating R packages as needed.
+
+5. Call renv::snapshot() again to save the state of your project library if your attempts to update R packages were successful, or call renv::restore() to revert to the previous state as encoded in the lockfile if your attempts to update packages introduced some new problems.
+
+
+-->
+
+# Deadlines and schedule
+
+* July 3, 2020 Project start
+* October 3, 2020 Provide list of external reviewers
+* June 3, 2021  Draft report due (plan on sooner)
+* August 3, 2020 Project end and final report due
+
+# Comments from the August 4, 2020 methods review
+
+* Clarify key terms with thorough definitions and describe the applied metrics, highlighting areas of standardization. Absent those details, some confusion may arise. Specifically,
+    +	Convey the practical differences between the proposed metrics of revenue volatility for state and other policymakers. These metrics can vary considerably depending on the underlying data distribution, meaningfully changing what is observed as volatility. 
+    + Elaborate on how revenue streams may need to be combined/collapsed for analytical tractability. If doing so, highlight the thresholds for those modification, if these differ by state or source, and if those decisions affect the results.  
+    + Account for the possible interpretations of concepts like “state economic structures” and economies “at risk”, and how those choices shift the meaning of the analysis and findings. If these concepts are applied differently by state, explain how these may be standardized.  
+
+* Ensure that the selected time frames (periods and trends) and their decision rules are transparent in the final report. Specifically: 
+    + Discuss how partial recessionary periods (i.e. quarters) will be addressed since the study will generally leverage annual data, to speak to policymaker budgeting cycles/priorities.
+    +	Clarify that “recent trends” may reflect multi-decade periods of fiscal management, which may not be self-evident. Explain how the bounds of “trend periods” are chosen, whether through an assessment of business cycles, regression analyses, inductive analyses or other techniques.
+
+* Ensure consistency between this and prior Pew studies, or provide a crosswalk, particularly if the methods have been modified or augmented. Focus on what sources of uncertainty remain embedded in each measure of volatility. 
+    + Assess whether correcting for tax policy adjustments changes estimated volatility. Also, since the policy adjusted time series is shorter, estimate whether a shorter series will complicate the development of robust volatility estimates using the more technical/complex approaches. 
+    + Highlight — for more technical methods — how trends are being estimated, and how differences in those trends might change the interpretation of volatility, as the embedded sources of uncertainty differ (e.g. by extracting cyclicality). 
+
+
+# States have highly volatile tax revenue
+
+<!-- I put this section after first slide header or else beamer adds a blank slide
+
+"`r format(Sys.time(), '%B %d, %Y')`"
+
+ioslides
+output:
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+
+beamer
+output:
+  beamer_presentation:
+    slide_level: 2
+classoption: "aspectratio=169"         
+    
+Themes: https://hartwork.org/beamer-theme-matrix/    
+-->
+
+<!-- For more details on authoring R presentations please visit <https://support.rstudio.com/hc/en-us/articles/200486468>. -->
+
+
+```{r include=FALSE}
+source(here::here("r", "libs_base.r"))
+# source(here::here("r", "libs_ts.r"))
+source(here::here("r", "functions.r"))
+devtools::session_info()
+
+glimpse(sgtax.a)
+# df <- sgtax.a
+# count(df, year) %>% as.data.frame()
+# count(df, vname)
+
+recessions
+
+sgt1 <- sgtax.a %>%
+  mutate(year=as.integer(year)) %>%
+  filter(stabbr=="US", item=="C105", year>=1950) %>%
+  mutate(vpch=pchya(value, year),
+         sd10=rollsd_p(vpch, 10),
+         sd10c=rollsd_p2(vpch, 10)) # population sd
+
+```
+
+
+```{r pchplot, fig.height=4.5, fig.width=8}
+# summary(sgtax.a)
+irecs <- which(recessions$rec_year >= 1960)
+
+p1 <- sgt1 %>%
+  filter(year >= 1960) %>%
+  ggplot(aes(year, vpch)) +
+  geom_line(colour="blue", size=1) +
+  geom_point(colour="blue", size=1.15) +
+  scale_y_continuous(name="% change", breaks=seq(-20, 20, 2)) +
+  scale_x_continuous(name=NULL, breaks=seq(1960, 2030, 5)) +
+  geom_hline(yintercept = 0) +
+  annotate("rect",
+           xmin = recessions$peak[irecs] %>% decimal_date(),
+           xmax = recessions$trough[irecs] %>% decimal_date(),
+           fill = "lightgrey",
+           alpha = .5, # larger alpha is darker rectangle
+           ymin = -Inf, ymax = Inf) +
+  ggtitle("Year over year growth in state government tax revenue for the United States",
+          subtitle="Recession periods are shaded.") +
+  labs(caption="Source: U.S. Bureau of the Census") +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust=0, size=9))
+p1
+
+```
+
+
+
+```{r vplot, eval=FALSE}
+# summary(sgtax.a)
+
+irecs <- which(recessions$rec_year >= 1960)
+
+p <- sgt1 %>%
+  filter(year >= 1960) %>%
+  ggplot(aes(year, sd10)) +
+  geom_line(colour="blue") +
+  geom_point(colour="blue", size=0.75) +
+  scale_y_continuous(name="Standard deviation (%)", breaks=seq(0, 10, .5), limits=c(0, NA)) +
+  scale_x_continuous(name=NULL, breaks=seq(1960, 2030, 5)) +
+  annotate("rect",
+           xmin = recessions$peak[irecs] %>% decimal_date(),
+           xmax = recessions$trough[irecs] %>% decimal_date(),
+           fill = "lightgrey",
+           alpha = .5, # larger alpha is darker rectangle
+           ymin = -Inf, ymax = Inf) +
+  ggtitle("Volatility in aggregate state government tax revenue for the United States",
+          subtitle="Trailing 10-year standard deviation of annual % change. Recession periods are shaded.") +
+  theme_bw()
+p    
+
+
+```
+
+
+
+# Tax revenue volatility and its impacts on state governments
+
+Provide deep and broad understanding of:
+
+* Ways to measure revenue volatility
+* Recent trends in revenue volatility
+* Drivers of state revenue volatility
+*	Implications for states in current recession and beyond
+
+Ultimate goal: Insights that can help policymakers manage budgets
+
+
+# Important sub-questions
+
+* To what extent is volatility driven by:
+    + The nature of national economic changes (e.g., characteristics of recession)?
+    + State economic structure?
+    + State tax structure? The portfolio of taxes? The structure of individual taxes?
+* Has tax revenue become more volatile over time? If so, why?
+* How much can states reduce volatility with alternative tax structures?
+
+All have implications for states in current recession and beyond.
+
+
+# Overall plan
+
+1. Review relevant literature
+2. Build database for analyzing volatility
+    + Annual state tax revenue, all states, by tax
+    + Auxiliary data to allow population & inflation adjustment
+    + Selected other data
+3. Multiple methods
+    + Descriptive analytic review of history
+    + Decomposition
+    + Simulations of portfolio effects
+    + Exploratory econometrics for certain topics
+
+
+# Core data source
+
+* Census Bureau Annual Survey of State Finances
+  + State tax revenue, annual, all states, many taxes
+  + Comprehensive (not just general fund)
+  + Relatively consistent definitions over time and states
+  + Annual period consistent with policymaking cycle
+  + Includes multiple recessions (some data back to mid-1950s):
+      + 1980-81, 1990, 2001, and 2007 (2020 won't be available)
+      + may be able to include 1960, 1969, 1973 recessions
+
+# Selected technical & data issues
+
+* Tax data implicitly include embedded policy changes. Use Pew tax-change data to help answer: How much does adjusting for policy changes affect conclusions?
+* How much do alternative volatility measures affect conclusions?
+* Data on structure of individual taxes are limited. To extent practical, use these limited data to help answer: How does structure of individual taxes affect volatility?
+  
+
+# Topics and approaches
++----------------------------------+----------------------------------------------+
+| Topic                            | Methods                                      |
++==================================+==============================================+
+| Ways to measure                  | - Literature review                          |
+| revenue volatility               | - Conceptual differences among measures      |
+|                                  | - Trends with different measures             |
++----------------------------------+----------------------------------------------+
+| Recent revenue volatility trends | - Descriptive analysis                       |
++----------------------------------+----------------------------------------------+
+| Drivers of revenue volatility    | - Descriptive analysis                       |
+|   (Nature of economic change,    | - Decomposition                              |
+|    State economic structure,     | - Econometric analysis                       |
+|    State tax structure)          | - Simulation of alternative structures       |
++----------------------------------+----------------------------------------------+
+| Implications in current          | - Synthesis of above                         |
+| recession and beyond             |                                              |
++----------------------------------+----------------------------------------------+
+
+
+# Concluding comments
+
+Ultimate goal: Provide insights that will help policymakers understand tax revenue volatility and manage its consequences for budgets.  
+
+
+# Appendix
+
+
+# Research review questions (1)
+
+* How much data?
+  + ~60 years x 50 states x ~25 tax types (collapsed down to ~5)
+  + ~15k year-state-tax observations after collapsing
+  
+* Why annual?
+  + It is the major policy making cycle for states
+  + Intra-year volatility does matter, but not as much
+  + Good data are available
+  
+# Research review questions (2)
+
+* Why not general fund?
+  + Often much smaller than total tax revenue
+  + Only captures some of the relevant volatility
+  + Not consistent across states or over time
+  + Not good data
+  
+* Why not fees?
+  + Generally not as volatile as tax revenue
+  + Much smaller than tax revenue (less budgetary importance)
+  + Hard to measure, not good data
+  
+# Auxiliary data sources I definitely will use
+
+* Census Bureau annual state population data for per-capita adjustment
+* Bureau of Economic Analysis (BEA): GDP price index
+  +  National, annual
+  +  For price adjustment
+* Pew state tax policy adjustments
+  +  Only available for a subset of relevant time periods and taxes
+  +  Noisy
+  +  Main purpose is to learn/identify how much our view of volatility changes if we adjust for policy changes.
+* BEA state gross domestic product, industrial detail, annual
+  +  For analyzing importance of differences in industrial composition
+  +  Especially during recessions
+  +  Not available for all years (SIC --> NAICS)
+  
+# Potential additional data sources I may use
+
+* BEA state regional price parities, annual
+  +  Might be useful for alternative view of price adjustment
+* IRS Statistics of Income, state, annual
+  +  Breakdown of components of income
+  +  Certain components such as capital gains can play important role in states with income taxes
+  +  Only available for recent years (~ 2000's+)
+* State sales tax base characteristics, if practical
+  +  Potentially valuable for disentangling role of economic structure
+  +  Potential sources include FTA or Mikesell
+
+# Ways to measure revenue volatility (1)
+
+* Strengths and weaknesses of potential measures, such as
+    + Standard deviation of percent change
+    + Interquartile range of percent change
+    + Deviation from trend
+    + Others based on literature review
+
+# Ways to measure revenue volatility (2)
+
+* Selected measurement issues
+    + Adjusting for inflation
+    + Per-capita adjustment
+    + Adjusting for policy changes
+      + Will use the Pew policy-change data (only available for 1995-2014)
+      + What questions are best addressed with these adjustments?
+      + How much does it matter?
+      + (And how good are these data for this purpose?)
+
+# Recent trends in revenue volatility
+
+* Variation over different time periods
+* Variation across states
+* Variation across tax revenue sources
+
