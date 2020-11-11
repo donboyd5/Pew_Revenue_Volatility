@@ -104,17 +104,59 @@ glimpse(sgtax.a)
 # df <- sgtax.a
 # count(df, year) %>% as.data.frame()
 # count(df, vname)
+data(package="BEAData")
+glimpse(nipa)
+nipa %>%
+  filter(freq=="Q", str_detect(vdesc, "Gross domestic product, Current")) %>%
+  group_by(vname, vdesc) %>%
+  filter(date==max(date))
+# A191RC US nominal gdp
+
+gdpfy <- nipa %>%
+  filter(vname=="A191RC", freq=="Q") %>%
+  # fix NY AL MI TX
+  mutate(fyear=ifelse(month(date) >= 7, year + 1, year) %>% as.integer) %>%
+  group_by(vname, fyear) %>%
+  summarise(gdp=mean(value, na.rm=TRUE), .groups="drop") %>%
+  filter(fyear < 2020) %>%
+  select(year=fyear, gdp)
 
 recessions
 
-sgt1 <- sgtax.a %>%
+
+# total tax, various volatility measures
+sgtaxus <- sgtax.a %>%
   mutate(year=as.integer(year)) %>%
   filter(stabbr=="US", item=="C105", year>=1950) %>%
   mutate(vpch=pchya(value, year),
          sd10=rollsd_p(vpch, 10),
          sd10c=rollsd_p2(vpch, 10)) # population sd
+
+taxgdpus <- sgtax.a %>%
+  mutate(year=as.integer(year)) %>%
+  filter(stabbr=="US", item=="C105", year>=1950) %>%
+  select(year, tottax=value) %>%
+  left_join(gdpfy, by="year") %>%
+  pivot_longer(cols=-year) %>%
+  group_by(name) %>%
+  mutate(vpch=pchya(value, year)) %>%
+  ungroup
+
+glimpse(taxgdpus)
+
 ```
 
+
+
+# TODO
+
+* NIPA data to measure recessions
+* NIPA data for consumption details
+* Possibly get data from Dauchy
+* Graph pch tax vs econ
+* IRs data components income
+* Consider base = revenue / rate as robustness check
+* State consumption data
 
 
 
@@ -123,22 +165,96 @@ sgt1 <- sgtax.a %>%
 * Ways to measure tax revenue volatility
 
 * Recent trends in revenue volatility
-    +  Has tax revenue become more volatile over time?
-    +  If so, why?
+  + Has tax revenue become more volatile over time?
+  + If so, why?
 
 * Drivers of state revenue volatility - to what extent driven by
-    +  The nature of national economic changes (e.g., characteristics of recession)?
-    +  State economic structure?
-    +  State tax structure? 
-         +  The portfolio of taxes? 
-         +  The structure of individual taxes?
+  + The nature of national economic changes (e.g., characteristics of recession)?
+  + State economic structure?
+  + State tax structure? 
+    + The portfolio of taxes? 
+    + The structure of individual taxes?
 
 *	Implications for states in current recession and beyond
-    +  What does the Covid-19 recession imply for state tax volatility?
-    +  How much can states reduce volatility with alternative tax structures?
+  +  What does the Covid-19 recession imply for state tax volatility?
+  +  How much can states reduce volatility with alternative tax structures?
+    
+
+Note: For details on references see [this](https://docs.google.com/spreadsheets/d/1hSWy_7ep4RbM9lfSA-LYnDeGI1c6p9Ud0GqcSlR9xJ8/edit?usp=sharing).
+
+
+# Introduction and motivation
 
 
 # Ways to measure tax revenue volatility
+
+* Past research
+  + Rolling variance (Dauchy 2013)
+  + Deviation from trend
+    + Kwak 2013 says White 1983; Dye and McGuire 1991; Braun and Otsuka 1998; Aisen and Jose´ Veiga 2008 all used deviation from trend
+    + Orthogonal Distance Regression (Kwak 2013)
+     
+
+## Selected measures for the United States
+
+### Setting the scene - year over year % change
+```{r pchplot, fig.height=4.5, fig.width=8, include=TRUE}
+# sd10c
+#  pchplot, fig.height=4.5, fig.width=8, eval=FALSE}
+# summary(sgtax.a)
+irecs <- which(recessions$rec_year >= 1960)
+
+p1 <- sgtaxus %>%
+  filter(year >= 1960) %>%
+  ggplot(aes(year, vpch)) +
+  geom_line(colour="blue", size=1) +
+  geom_point(colour="blue", size=1.15) +
+  scale_y_continuous(name="% change", breaks=seq(-20, 20, 2)) +
+  scale_x_continuous(name=NULL, breaks=seq(1960, 2030, 5)) +
+  geom_hline(yintercept = 0) +
+  annotate("rect",
+           xmin = recessions$peak[irecs] %>% decimal_date(),
+           xmax = recessions$trough[irecs] %>% decimal_date(),
+           fill = "lightgrey",
+           alpha = .5, # larger alpha is darker rectangle
+           ymin = -Inf, ymax = Inf) +
+  ggtitle("Year over year growth in state government tax revenue for the United States",
+          subtitle="Recession periods are shaded.") +
+  labs(caption="Source: U.S. Bureau of the Census") +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust=0, size=9))
+# p1
+
+p2 <- taxgdpus %>%
+  filter(year >= 1960) %>%
+  ggplot(aes(year, vpch, colour=name)) +
+  geom_line(size=1) +
+  geom_point(size=1.15) +
+  scale_y_continuous(name="% change", breaks=seq(-20, 20, 2)) +
+  scale_x_continuous(name=NULL, breaks=seq(1960, 2030, 5)) +
+  scale_colour_manual(values=c("red", "blue")) +
+  geom_hline(yintercept = 0) +
+  annotate("rect",
+           xmin = recessions$peak[irecs] %>% decimal_date(),
+           xmax = recessions$trough[irecs] %>% decimal_date(),
+           fill = "lightgrey",
+           alpha = .5, # larger alpha is darker rectangle
+           ymin = -Inf, ymax = Inf) +
+  ggtitle("Year over year growth in state government tax revenue and GDP for the United States",
+          subtitle="Recession periods are shaded.") +
+  labs(caption="Source: U.S. Bureau of the Census and Bureau of Economic Analysis") +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust=0, size=9))
+p2
+
+
+```
+
+
+### Rolling standard deviation
+
+
+### Deviation from trend
 
 
 # Recent trends in revenue volatility
@@ -274,7 +390,7 @@ All have implications for states in current recession and beyond.
 
 
 
-```{r pchplot, fig.height=4.5, fig.width=8, eval=FALSE}
+```{r pchplot_old, fig.height=4.5, fig.width=8, eval=FALSE}
 # summary(sgtax.a)
 irecs <- which(recessions$rec_year >= 1960)
 

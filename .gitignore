@@ -10,3 +10,4 @@
 *.doc*
 *.gz
 ignore/
+project_analysis/
