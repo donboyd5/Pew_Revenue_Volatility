@@ -11,7 +11,8 @@ library(sweep)
 library(changepoint) # shift analysis
 library(tsoutliers) # for automating detection of outliers and shifts
 
-library(forecast) # for auto.arima
+# library(forecast) # for auto.arima
+library(fable)
 library(lmtest) # for coeftest
 library(sandwich) # for Newey-West Standard Errors
 

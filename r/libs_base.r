@@ -18,7 +18,7 @@ library(grDevices)
 library(knitr)
 library(kableExtra)
 
-
+library(usmap)
 library(btools)
 library(bdata)
 library(BEAData)
