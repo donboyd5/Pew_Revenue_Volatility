@@ -3,11 +3,14 @@
 .RData
 .Ruserdata
 *.csv
-*.xl*
+*.doc*
+*.gz
 *.htm*
 *.md
 *.pdf
-*.doc*
-*.gz
+*.rds
+*.xl*
 ignore/
+libs/
 project_analysis/
+renv/

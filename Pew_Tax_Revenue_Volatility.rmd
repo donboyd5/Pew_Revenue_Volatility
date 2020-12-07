@@ -15,8 +15,8 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, include=FALSE)
+```{r setup, include=FALSE, eval=TRUE}
+knitr::opts_chunk$set(echo = FALSE, include=FALSE, eval=FALSE, message = FALSE, warning = FALSE)
 # renv::record("renv@0.12.2")
 ```
 
@@ -72,21 +72,24 @@ The general workflow when working with renv is:
 # create tarballs of the desired packages and save them in the renv\local directory here, so that
 # they will be portable. users will then have to install them from the renv\local directory
 # steps below
+
 # 1) Define directories
 # pkgsource_dir is relevant for Boyd only - it is the location of source files for any packages I created
 # pkgsource_dir <- r"(C:\RPrograms PC\Packages\)"  # raw string
 # pkgdir is where "tarballs" of local packages will be placed -- this will be...
 # pkgdir <- r"(C:\RPrograms PC\ProjectsCurrent\Pew_Revenue_Volatility\renv\local\)"
-# 1.) On Boyd machine: build and save the bdata package tarball in the renv local directory
-# devtools::build(pkg = paste0(pkgsource_dir, "bdata"), 
-#                 path = pkgdir,
-#                 binary = FALSE,
-#                 vignettes = TRUE,
-#                 manual = FALSE,
-#                 args = NULL,
-#                 quiet = FALSE)
+
+# 2) On Boyd machine: build and save the bdata package tarball in the renv local directory
+devtools::build(pkg = paste0(pkgsource_dir, "btools"),  # bdata BEAData btools
+                path = pkgdir,
+                binary = FALSE,
+                vignettes = TRUE,
+                manual = FALSE,
+                args = NULL,
+                quiet = FALSE)
 # do the above for any other needed local packages
-# 2) On Boyd machine and on user machine, install these packages from tarballs
+
+# 3) On Boyd machine and on user machine, install these packages from tarballs
 # you may have to define the pkgdir location on your machine
 # if the package is in use and you are updating it, then first: detach(package:bdata)
 # pkgs <- c("bdata_0.6.tar.gz", "BEAData_0.6.0.tar.gz", "btools_0.9.tar.gz")
@@ -110,23 +113,21 @@ The general workflow when working with renv is:
 
 
 
-```{r libs_fns, include=FALSE}
+```{r libs_fns, include=FALSE, eval=TRUE}
 source(here::here("r", "libs_base.r"))
-# source(here::here("r", "libs_ts.r"))
+source(here::here("r", "libs_ts.r"))
 source(here::here("r", "functions.r"))
 devtools::session_info()
 
 ```
 
 
-```{r build_data}
+```{r build_data, eval=TRUE}
 glimpse(sgtax.a)  # 2019 end year; most values from ~1951+
-sgtax.a <- sgtax.a %>%
-  mutate(year=as.integer(year))
 # count(sgtax.a, year) %>% as.data.frame()
 # count(sgtax.a, item, desc)
 
-data(package="BEAData")
+# data(package="BEAData")
 glimpse(nipa)
 nipa %>%
   filter(freq=="Q", str_detect(vdesc, "Gross domestic product, Current")) %>%
@@ -143,28 +144,181 @@ gdpfy <- nipa %>%
   filter(fyear < 2020) %>%
   select(year=fyear, gdp)
 gdpfy %>% ht  # 1947, 2019
+ 
+baseyear <- 2019
+gdppi <- nipa %>%
+  filter(vname=="A191RG", freq=="Q") %>%
+  # fix NY AL MI TX
+  mutate(fyear=ifelse(month(date) >= 7, year + 1, year) %>% as.integer) %>%
+  group_by(vname, fyear) %>%
+  summarise(gdppi=mean(value, na.rm=TRUE), .groups="drop") %>%
+  filter(fyear < 2020) %>%
+  select(year=fyear, gdppi) %>%
+  mutate(igdppi=gdppi[year==baseyear] / gdppi)
 
 recessions # 1857, ..., 2020
 
 
+# collapse taxes
+taxnames <- sgtax.a %>% select(item, desc) %>% distinct()
+items <- c("C105", "T09", "C109", "T40", "T41", "T53")
+varnames <- c("tottax", "gst", "selsalestax", "iit", "cit", "sevtax")
+
+taxgrouped <- sgtax.a %>%
+  filter(year >= 1951) %>%
+  filter(item %in% items) %>%
+  mutate(varname=factor(item, levels=items, labels=varnames)) %>%
+  select(year, stabbr, varname, value) %>%
+  pivot_wider(names_from = varname) %>%
+  mutate(across(.cols = all_of(varnames), .fns = ~ replace(.x, is.na(.x), 0))) %>%
+  rowwise() %>% 
+  mutate(nonother = sum(c_across(all_of(setdiff(varnames, "tottax")))),
+         othertax=tottax - nonother) %>%
+  select(-nonother) %>%
+  pivot_longer(-c(year, stabbr))
+taxgrouped  
+
+
+taxreal <- taxgrouped %>%
+  rename(nominal=value) %>%
+  left_join(gdppi %>% select(year, igdppi), by="year") %>%
+  mutate(real=nominal * igdppi) %>%
+  select(-igdppi) %>%
+  pivot_longer(c(nominal, real), names_to="type")
+
+
 # total tax, various volatility measures
-sgtaxus <- sgtax.a %>%
-  filter(stabbr=="US", item=="C105", year>=1950) %>%
-  mutate(vpch=pchya(value, year),
-         sd10=rollsd_p(vpch, 10),
-         sd10c=rollsd_p2(vpch, 10)) # population sd
+# sgtaxus <- sgtax.a %>%
+#   filter(stabbr=="US", item=="C105", year>=1950) %>%
+#   mutate(vpch=pchya(value, year),
+#          sd10=rollsd_p(vpch, 10), # population sd align right
+#          sd10c=rollsd_p2(vpch, 10)) # population sd align cener
+# 
+# taxgdpus <- sgtax.a %>%
+#   filter(stabbr=="US", item=="C105", year>=1950) %>%
+#   select(year, tottax=value) %>%
+#   left_join(gdpfy, by="year") %>%
+#   pivot_longer(cols=-year) %>%
+#   group_by(name) %>%
+#   mutate(vpch=pchya(value, year)) %>%
+#   ungroup
+# 
+# glimpse(taxgdpus)
 
-taxgdpus <- sgtax.a %>%
-  filter(stabbr=="US", item=="C105", year>=1950) %>%
-  select(year, tottax=value) %>%
-  left_join(gdpfy, by="year") %>%
+
+```
+
+
+```{r vol_measures}
+f <- function(df, vname){
+  vts <- ts(df[vname])
+  vts_hp <- hpfilter(vts, freq=NULL, type=c("lambda"), drift=FALSE)
+  df %>% mutate(trend=as.numeric(vts_hp$trend),
+                cycle=as.numeric(vts_hp$cycle))
+}
+
+vol1 <- taxreal %>%
+  filter(name=="tottax") %>%
+  group_by(stabbr, name, type) %>%
+  arrange(year) %>%
+  f(., "value")
+  
+
+
+
+df <- df %>%
+  f(., "iit") %>%
+  mutate(dtrend=cycle / trend * 100,
+         pch=iit / iit[match(year - 1, year)] * 100 - 100,
+         dtrend_sd10=rollsd_p(dtrend, 10),
+         pch_sd10=rollsd_p(pch, 10))
+
+
+```
+
+
+
+```{r explore}
+# remove trend
+df <- sgtax.a %>%
+  filter(year >= 1951, stabbr=="NY", item=="T40") %>%
+  select(year, stabbr, iit=value)
+df %>% ht  
+
+# iit <- ts(df$iit, start = 1951, end=2019)
+# iit <- ts(df$iit)
+# plot(iit)
+# 
+# stl(iit, s.window = "periodic")
+# # hpfilter(iit, freq=NULL, type=c("lambda","frequency"),drift=FALSE)
+# iit_hp <- hpfilter(iit, freq=NULL, type=c("lambda"), drift=FALSE)
+# iit_hp$trend
+# iit_hp$cycle
+
+f <- function(df, vname){
+  vts <- ts(df[vname])
+  vts_hp <- hpfilter(vts, freq=NULL, type=c("lambda"), drift=FALSE)
+  df %>% mutate(trend=as.numeric(vts_hp$trend),
+                cycle=as.numeric(vts_hp$cycle))
+}
+
+df <- df %>%
+  f(., "iit") %>%
+  mutate(dtrend=cycle / trend * 100,
+         pch=iit / iit[match(year - 1, year)] * 100 - 100,
+         dtrend_sd10=rollsd_p(dtrend, 10),
+         pch_sd10=rollsd_p(pch, 10))
+
+glimpse(df)
+
+
+df %>%
+  select(year, iit, trend) %>%
+  pivot_longer(cols=c(iit, trend)) %>%
+  ggplot(aes(year, value, colour=name)) +
+  geom_line() +
+  geom_point()
+
+
+df %>%
+  ggplot(aes(year, dtrend)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0)
+  
+df %>%
+  ggplot(aes(year, pch)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0)
+
+# df %>%
+#   select(year, dtrend, pch) %>%
+#   pivot_longer(cols=-year) %>%
+#   ggplot(aes(year, value, colour=name)) +
+#   geom_line() +
+#   geom_point() +
+#   geom_hline(yintercept = 0)
+# 
+# df %>%
+#   select(year, dtrend, pch) %>%
+#   mutate(pch=pch - mean(pch, na.rm=TRUE)) %>%
+#   pivot_longer(cols=-year) %>%
+#   ggplot(aes(year, value, colour=name)) +
+#   geom_line() +
+#   geom_point() +
+#   geom_hline(yintercept = 0)
+
+df %>%
+  select(year, dtrend_sd10, pch_sd10) %>%
   pivot_longer(cols=-year) %>%
-  group_by(name) %>%
-  mutate(vpch=pchya(value, year)) %>%
-  ungroup
+  ggplot(aes(year, value, colour=name)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0)
+  
 
-glimpse(taxgdpus)
-
+ 
 ```
 
 
@@ -206,45 +360,12 @@ Note: For details on references see [this](https://docs.google.com/spreadsheets/
 
 # Introduction and motivation
 
-
-# Ways to measure tax revenue volatility
-
-* Past research
-  + Rolling variance (Dauchy 2013)
-  + Deviation from trend
-    + Kwak 2013 says White 1983; Dye and McGuire 1991; Braun and Otsuka 1998; Aisen and Jose´ Veiga 2008 all used deviation from trend
-    + Orthogonal Distance Regression (Kwak 2013)
-     
-
-## Selected measures for the United States
-
-### Setting the scene - year over year % change
-```{r pchplot, fig.height=4.5, fig.width=8, include=TRUE}
+## Setting the scene - year over year % change
+```{r pchplot, fig.height=4.5, fig.width=8, eval=TRUE, include=TRUE}
 # sd10c
 #  pchplot, fig.height=4.5, fig.width=8, eval=FALSE}
 # summary(sgtax.a)
 irecs <- which(recessions$rec_year >= 1960)
-
-p1 <- sgtaxus %>%
-  filter(year >= 1960) %>%
-  ggplot(aes(year, vpch)) +
-  geom_line(colour="blue", size=1) +
-  geom_point(colour="blue", size=1.15) +
-  scale_y_continuous(name="% change", breaks=seq(-20, 20, 2)) +
-  scale_x_continuous(name=NULL, breaks=seq(1960, 2030, 5)) +
-  geom_hline(yintercept = 0) +
-  annotate("rect",
-           xmin = recessions$peak[irecs] %>% decimal_date(),
-           xmax = recessions$trough[irecs] %>% decimal_date(),
-           fill = "lightgrey",
-           alpha = .5, # larger alpha is darker rectangle
-           ymin = -Inf, ymax = Inf) +
-  ggtitle("Year over year growth in state government tax revenue for the United States",
-          subtitle="Recession periods are shaded.") +
-  labs(caption="Source: U.S. Bureau of the Census") +
-  theme_bw() +
-  theme(plot.caption = element_text(hjust=0, size=9))
-# p1
 
 p2 <- taxgdpus %>%
   filter(year >= 1960) %>%
@@ -265,11 +386,27 @@ p2 <- taxgdpus %>%
           subtitle="Recession periods are shaded.") +
   labs(caption="Source: U.S. Bureau of the Census and Bureau of Economic Analysis") +
   theme_bw() +
-  theme(plot.caption = element_text(hjust=0, size=9))
+  theme(plot.caption = element_text(hjust=0, size=9)) +
+  theme(legend.title = element_blank())
 p2
+ggsave(filename = here::here("results", "tax_gdp_us.png"), plot = p2)
 
 
 ```
+
+
+# Ways to measure tax revenue volatility
+
+* Past research
+  + Rolling variance (Dauchy 2013)
+  + Deviation from trend
+    + Kwak 2013 says White 1983; Dye and McGuire 1991; Braun and Otsuka 1998; Aisen and Jose´ Veiga 2008 all used deviation from trend
+    + Orthogonal Distance Regression (Kwak 2013)
+     
+
+## Selected measures for the United States
+
+
 
 
 ### Rolling standard deviation

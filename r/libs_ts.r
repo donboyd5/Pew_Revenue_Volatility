@@ -16,6 +16,7 @@ library(fable)
 library(lmtest) # for coeftest
 library(sandwich) # for Newey-West Standard Errors
 
+library(mFilter)  # Hodrick-Prescott filter
 
 library(ggpmisc)
 
