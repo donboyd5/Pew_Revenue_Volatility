@@ -14,3 +14,4 @@ ignore/
 libs/
 project_analysis/
 renv/
+temp/

@@ -80,20 +80,20 @@ The general workflow when working with renv is:
 # pkgdir <- r"(C:\RPrograms PC\ProjectsCurrent\Pew_Revenue_Volatility\renv\local\)"
 
 # 2) On Boyd machine: build and save the bdata package tarball in the renv local directory
-devtools::build(pkg = paste0(pkgsource_dir, "btools"),  # bdata BEAData btools
-                path = pkgdir,
-                binary = FALSE,
-                vignettes = TRUE,
-                manual = FALSE,
-                args = NULL,
-                quiet = FALSE)
+# devtools::build(pkg = paste0(pkgsource_dir, "btools"),  # bdata BEAData btools
+#                 path = pkgdir,
+#                 binary = FALSE,
+#                 vignettes = TRUE,
+#                 manual = FALSE,
+#                 args = NULL,
+#                 quiet = FALSE)
 # do the above for any other needed local packages
 
 # 3) On Boyd machine and on user machine, install these packages from tarballs
 # you may have to define the pkgdir location on your machine
 # if the package is in use and you are updating it, then first: detach(package:bdata)
 # pkgs <- c("bdata_0.6.tar.gz", "BEAData_0.6.0.tar.gz", "btools_0.9.tar.gz")
-# install.packages(paste0(pkgdir, pkgs[1]), repos=NULL, type="source")
+# install.packages(paste0(pkgdir, pkgs[3]), repos=NULL, type="source")
 
 # to get it all started:
 # renv::init()
@@ -316,23 +316,42 @@ df %>%
   geom_line() +
   geom_point() +
   geom_hline(yintercept = 0)
-  
-
  
 ```
 
+# Organizational
+## Links
 
++  [Zotero folder](https://www.zotero.org/groups/2541602/pew_tax_revenue_volatility/library)
++  [Google sheet](https://docs.google.com/spreadsheets/d/1hSWy_7ep4RbM9lfSA-LYnDeGI1c6p9Ud0GqcSlR9xJ8/edit?usp=sharing) (barely started) to summarize important articles
 
-# TODO
+## Data tasks
+### Done
 
-* NIPA data to measure recessions
-* NIPA data for consumption details
+* State tax revenue from Census by tax, state, and year, 1951-2019, collapsed to the following categories (currently):
+  + total taxes (tottax)
+  + individual income tax (iit)
+  + general sales tax (gst)
+  + selective sales taxes such as tobacco, motor fuel, motor vehicle fees, alcohol… (selsalestax)
+  + corporate income tax (cit)
+  + severance taxes (sevtax)
+  + all other taxes (othertax)
+* Economic data
+  + gross domestic product, by state fiscal year, 1951-2019 (still must adjust for states with fiscal years different from July 1)
+  + gross domestic price index (chained), by state fiscal year, 1951-2019 (same adjustment required)
+  + official NBER dates for recessions during relevant time periods
+  + obtained NIPA details for description of recessions
+  + obtained state-level consumption data from BEA
+
+### TODO
+
+* organize NIPA data to measure recessions
+* organize NIPA data for consumption details
+* organize state consumption data
 * Possibly get data from Dauchy
 * Graph pch tax vs econ
 * IRs data components income
 * Consider base = revenue / rate as robustness check
-* State consumption data
-
 
 
 # Goals and issues
