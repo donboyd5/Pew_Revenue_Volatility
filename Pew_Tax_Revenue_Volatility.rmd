@@ -16,6 +16,34 @@ editor_options:
 ---
 
 
+<!-- <style> -->
+<!-- body .main-container { -->
+<!--   max-width: 1500px; -->
+<!-- } -->
+<!-- </style> -->
+
+
+
+```{r runall, eval=FALSE, echo=FALSE} 
+# When we want a final report, run the following code selectively "by hand" (interactively)
+# -- NEVER using Knit with eval=TRUE
+# note <br> breaks line for html output but \n should break for pdf; also could try |
+
+rmdfn <- "./Pew_Tax_Revenue_Volatility.rmd" # this file
+outfn <- paste0("tax_volatility_", format(Sys.time(), "%Y-%m-%d"), ".html")
+rmarkdown::render(rmdfn, output_format="html_document", output_file=outfn)
+
+# library("RCurl")
+# ftpUpload(outfn, "ftp://kffrig:boyd4812@files.000webhost.com/public_html/KFF_RIG_MedicaidCuts_new.html")
+
+# Note may b safest to fully exit RStudio and restart it before running whole thing. Otherwise knitr may get confused
+# and include repetitive information in the output html file.
+
+```
+
+
+
+
 ```{r setup, include=FALSE, eval=TRUE}
 knitr::opts_chunk$set(echo = FALSE, include=FALSE, eval=FALSE, message = FALSE, warning = FALSE)
 ```
@@ -30,6 +58,7 @@ knitr::opts_chunk$set(echo = FALSE, include=FALSE, eval=FALSE, message = FALSE, 
 # }
 
 ```
+
 
 
 <!-- comments -->
@@ -71,15 +100,23 @@ The general workflow when working with renv is:
 -->
 
 
-<!-- I put this section after first slide header or else beamer adds a blank slide
-
-"`r format(Sys.time(), '%B %d, %Y')`"
- 
--->
-
 
 ```{r renv_notes, eval=FALSE}
+# https://rstudio.github.io/renv/articles/renv.html
+
+# Custom R Package Repositories
+# Custom and local R package repositories are supported as well. The only requirement is that these repositories
+# are set as part of the repos R option, and that these repositories are named. For example, you might use:
+# 
+# repos <- c(CRAN = "https://cloud.r-project.org", WORK = "https://work.example.org")
+# options(repos = repos)
+# to tell renv to work with both the official CRAN package repository, as well as a package repository you have hosted and set up in your work environment.
+
 # install local packages
+# local_package_sources <- r"(C:\RPrograms PC\ProjectsCurrent\Pew_Revenue_Volatility\local\)"
+# repos <- c(CRAN = "https://cloud.r-project.org", LOCAL = local_package_sources)
+# options(repos = repos)
+
 # note that tarballs are at: C:\RPrograms PC\Packages\bdata_0.6.tar.gz
 # create tarballs of the desired packages and save them in the renv\local directory here, so that
 # they will be portable. users will then have to install them from the renv\local directory
@@ -91,22 +128,29 @@ The general workflow when working with renv is:
 # pkgdir is where "tarballs" of local packages will be placed -- this will be...
 # pkgdir <- r"(C:\RPrograms PC\ProjectsCurrent\Pew_Revenue_Volatility\renv\local\)"
 
-# 2) On Boyd machine: build and save the bdata package tarball in the renv local directory
-# devtools::build(pkg = paste0(pkgsource_dir, "btools"),  # bdata BEAData btools
-#                 path = pkgdir,
-#                 binary = FALSE,
-#                 vignettes = TRUE,
-#                 manual = FALSE,
-#                 args = NULL,
-#                 quiet = FALSE)
+# 2) This step is for Boyd machine only:
+# uncomment code below and build and save my local packages tarballs in the renv local directory
+devtools::build(pkg = paste0(pkgsource_dir, "btools"),  # bdata BEAData btools
+                path = pkgdir,
+                binary = FALSE,
+                vignettes = FALSE,
+                manual = FALSE,
+                args = NULL,
+                quiet = FALSE)
 # do the above for any other needed local packages
 
 # 3) On Boyd machine and on user machine, install these packages from tarballs
 # you may have to define the pkgdir location on your machine
 # if the package is in use and you are updating it, then first: detach(package:bdata)
-# pkgs <- c("bdata_0.6.tar.gz", "BEAData_0.6.0.tar.gz", "btools_0.9.tar.gz")
-# install.packages(paste0(pkgdir, pkgs[3]), repos=NULL, type="source")
+# pkgs <- c("bdata_0.7.tar.gz", "BEAData_0.6.0.tar.gz", "btools_0.9.tar.gz")
 
+renv::install(paste0(pkgdir, "bdata_0.7.tar.gz"))
+renv::install(paste0(pkgdir, "BEAData_0.6.0.tar.gz"))
+renv::install(paste0(pkgdir, "btools_0.9.tar.gz"))
+renv::snapshot()
+
+
+# further notes
 # to get it all started:
 # renv::init()
 
@@ -117,12 +161,12 @@ The general workflow when working with renv is:
 # periodically execute:
 # renv::snapshot()
 
+# to see what directory is being used by renv for local package sources, execute:
 # renv:::renv_paths_local()
 
 # ${RENV_PATHS_LOCAL}/<package>_<version>.tar.gz
 
 ```
-
 
 
 ```{r get_libs_and_functions, include=FALSE, eval=TRUE}
@@ -133,6 +177,7 @@ devtools::session_info()
 # devtools::package_info()
 
 ```
+
 
 
 # Project management and organization
@@ -148,6 +193,8 @@ devtools::session_info()
 
 +  [Zotero folder](https://www.zotero.org/groups/2541602/pew_tax_revenue_volatility/library)
 +  [Google sheet](https://docs.google.com/spreadsheets/d/1hSWy_7ep4RbM9lfSA-LYnDeGI1c6p9Ud0GqcSlR9xJ8/edit?usp=sharing) (barely started) to summarize important articles
++  [Google drive folder](https://drive.google.com/drive/folders/1fM7HIP7qrKbIdndF_wQ30WxVb1j_Cq06)
+    +   Draft report is stored here (latest version has highest number in parentheses)
 
 
 ## Goals and issues
@@ -205,7 +252,9 @@ Use renv.
 * organize state consumption data
 * Possibly get data from Dauchy
 * Graph pch tax vs econ
-* IRs data components income
+* IRS data components income
+* Measures of income tax progressivity
+* Similar measures sales tax?
 * Consider base = revenue / rate as robustness check
 
 ## Details about the project
@@ -306,6 +355,8 @@ All have implications for states in current recession and beyond.
 
 
 
+
+
 # Data preparation and checking
 
 Certain chunk names in this section start with "ONETIME". In those chucks, I create and save data that will be later read from files. The data only need to be created one time (or updated and re-saved if I decide to update the data).
@@ -382,23 +433,231 @@ recessions # 1857, ..., 2020
 
 
 ```{r nipa_national_data_for_recessions}
+# https://apps.bea.gov/iTable/iTable.cfm
 # we want two kinds of breakdowns:
 #    C + I + G + (X - M)
 #    Industrial breakdown
 
 #.. CIGXM ----
 # Table 1.1.6. Real Gross Domestic Product, Chained Dollars
+tab <- NIPAvars %>%
+  filter(tabnum == "1.1.6") %>%
+  arrange(line)
+
+cigxm_vars <- tab %>%
+  filter(line %in% c(1:6, 7, 8, 14, 15, 15, 22))
+cigxm_vars
+
+cigxm <- nipa %>%
+  right_join(cigxm_vars %>% 
+               select(vname), 
+             by = "vname")
+
+
+#.. Industrial breakdown ----
+# A150RX
+NIPAvars %>%
+  filter(vname == "A150RX") 
+
+tmp <- NIPAvars %>%
+  filter(str_detect(vdesc, coll("manuf", ignore_case = TRUE))) 
+ 
+mtables <- count(tmp, tabname)
+# https://apps.bea.gov/industry/Release/XLS/GDPxInd/ValueAdded.xlsx
+# https://apps.bea.gov//industry/iTables%20Static%20Files/AllTablesHist.zip
+
+
+
+# Table 5.8.6B. Real Private Inventories and Real Domestic Final Sales by Industry, Chained Dollars
+# Table 6.16D. Corporate Profits by Industry
+# Table 6.5D. Full-Time Equivalent Employees by Industry
+
+#..Employment breakdown ----
+# https://www.bls.gov/web/empsit/cesseriespub.htm
+# https://download.bls.gov/pub/time.series/ce/ce.data.01a.CurrentSeasAE  
+# https://download.bls.gov/pub/time.series/ce/ce.txt says:
+# ce.data.01a.CurrentSeasAE - contains every seasonally adjusted all employee series and its complete history.    
+
+#..Causes and characteristics ----
+# https://www.investopedia.com/articles/economics/08/past-recessions.asp
+# inflation: 1969
+# oil and energy crises: 1973, 1980, 1981
+# war: 1990 (Gulf)
+# 9/11:  2001
+# financial crisis: 2007 Great Recession
+# real estate: 2007 GR
+# 
+#
+# variables:
+# oil prices
+# real estate prices
+# stock market
+# manufacturing, tourism, other sectors
+# unemployment rate
+
+```
+    
+    
+## Census Bureau tax data
+
+### Clean tax data
+
+Steps:
+
+1.    Get Census state govt tax data from bdata (previously created)
+2.    
+
+```{r get_tax}
+
+glimpse(sgtax.a)  # 2019 end year; most values from ~1951+
+# count(sgtax.a, year) %>% as.data.frame()
+# count(sgtax.a, item, desc)
+
+taxnames <- sgtax.a %>% select(item, desc) %>% distinct()
+items <- c("C105", "T09", "C109", "T40", "T41", "T53")
+varnames <- c("tottax", "gst", "selsalestax", "iit", "cit", "sevtax")
+sumvars <- setdiff(varnames, "tottax")
+
+tax1 <- sgtax.a %>%
+  filter(year >= 1951) %>%
+  filter(item %in% items) %>%
+  mutate(name=factor(item, levels=items, labels=varnames)) %>%
+  select(stabbr, name, year, value) %>%
+  arrange(stabbr, name, year)
+
+summary(tax1)  # no missing values
+
+```
+
+Identify and explore anomalies:
+
++   missing
++   zero
++   missing or zero at start (always assumed bad)
++   missing or zero at end (always assumed bad)
++   missing in middle
++   zero in middle
++   negative in middle (logs won't work -- only 1 found)
++   short runs (fewer than X positive values in a row)
+
+
+```{r anomalies}
+# identify different anomalies
+# CO sevtax  2017 0
+# OH cit 2014 -118 
+tax1 %>% filter(stabbr=="AK", name=="iit")
+tax1 %>% filter(stabbr=="AK", name=="gst")
+tax1 %>% filter(stabbr=="AZ", name=="sevtax")
+tax1 %>% filter(stabbr=="CO", name=="sevtax")
+tax1 %>% filter(stabbr=="OH", name=="cit")
+tax1 %>% filter(stabbr=="NH", name=="sevtax")
+tax1 %>% filter(stabbr=="SD", name=="sevtax")
+
+a1 <- c(0, 0, NA, 1, 2, 3, 0, 4, 5, 6, 0, 0)
+a2 <- c(0, 0, 0, 0)
+a3 <- c(0, NA, 0, 0)
+a4 <- c(7, 9, 0, 0, NA, 1, 2, 3, 0, 4, 5, 6)
+
+firstnz <- function(x) {
+  ifelse(all(x==0, na.rm=TRUE), 
+         Inf, 
+         which(x != 0)[[1]])
+}
+firstnz(a1)
+firstnz(a2)
+firstnz(a3)
+firstnz(a4)
+
+lastnz <- function(x) {
+  ifelse(all(x==0, na.rm=TRUE),
+         -Inf, 
+         tail(which(x != 0), 1))
+}
+lastnz(a1)
+lastnz(a2)
+lastnz(a3)
+lastnz(a4)
+
+firstgap <- function(gap) {
+  ifelse(all(gap !=TRUE, na.rm=TRUE),
+         Inf, 
+         which(gap==TRUE)[[1]]) # first gap
+}
+
+
+lastgap <- function(gap) {
+  ifelse(all(gap !=TRUE, na.rm=TRUE),
+         -Inf, 
+         tail(which(gap==TRUE), 1)) # first gap
+}
+
+
+anomalies <- tax1 %>%
+  group_by(stabbr, name) %>%
+  mutate(missval = is.na(value),
+         zeroval = value == 0,
+         negval = value < 0,
+         leadzero = row_number() < firstnz(value),
+         trailzero = row_number() > lastnz(value),
+         gap = zeroval & !(leadzero | trailzero),
+         pregap = row_number() < firstgap(gap),   # before the first gap
+         postgap = row_number() > lastgap(gap))   # after the last gap
+summary(anomalies)
+
+anomalies %>% filter(stabbr=="AK", name=="iit")
+anomalies %>% filter(stabbr=="AK", name=="gst")
+anomalies %>% filter(stabbr=="AZ", name=="sevtax")
+anomalies %>% filter(stabbr=="AZ", name=="cit") # gap in 1957
+anomalies %>% filter(stabbr=="CO", name=="sevtax")
+anomalies %>% filter(stabbr=="OH", name=="cit")
+anomalies %>% filter(stabbr=="NH", name=="sevtax")
+anomalies %>% filter(stabbr=="NV", name=="sevtax")
+anomalies %>% filter(stabbr=="SD", name=="sevtax")
+anomalies %>% filter(gap)
+
+anomalies %>% 
+  filter(stabbr=="NV", name=="sevtax") %>%
+  lastgap()
+
+# rules:
+# - drop all lead zero and trail zero
+# - take the post gap periods
+# individually and decide - take the post gap
+
+anomalies2 <- anomalies %>%
+  filter(!(leadzero | trailzero))
+
+
+
+
+
+ibad <- which(a %in% c(0, NA_real_))
+Position(f, x, right = FALSE, nomatch = NA_integer)
+
+
+anomalies %>%
+  select(stabbr, name, firstyear) %>%
+  unique() %>%
+  filter(firstyear != 1951)
+
+anomalies %>%
+  select(stabbr, name, fy2) %>%
+  unique() %>%
+  filter(fy2 != 1951)
+
+# mutate(gap = exercise_id - lag(exercise_id, default = 0))
 
 
 ```
 
 
-    
-    
-## Census Bureau tax data
+
 
 
 ```{r tax_data, eval=TRUE}
+glimpse(sgrev)
+
+
 glimpse(sgtax.a)  # 2019 end year; most values from ~1951+
 # count(sgtax.a, year) %>% as.data.frame()
 # count(sgtax.a, item, desc)
@@ -410,31 +669,92 @@ glimpse(sgtax.a)  # 2019 end year; most values from ~1951+
 taxnames <- sgtax.a %>% select(item, desc) %>% distinct()
 items <- c("C105", "T09", "C109", "T40", "T41", "T53")
 varnames <- c("tottax", "gst", "selsalestax", "iit", "cit", "sevtax")
+sumvars <- setdiff(varnames, "tottax")
 
-tax_nominal <- sgtax.a %>%
+tax1 <- sgtax.a %>%
   filter(year >= 1951) %>%
   filter(item %in% items) %>%
-  mutate(varname=factor(item, levels=items, labels=varnames)) %>%
-  select(year, stabbr, varname, value) %>%
-  pivot_wider(names_from = varname) %>%
-  mutate(across(.cols = all_of(varnames), .fns = ~ replace(.x, is.na(.x), 0))) %>%
-  rowwise() %>% 
-  mutate(nonother = sum(c_across(all_of(setdiff(varnames, "tottax")))),
+  mutate(name=factor(item, levels=items, labels=varnames)) %>%
+  select(stabbr, name, year, value) %>%
+  
+  # now calculate other tax
+  pivot_wider(names_from = name) %>%
+  mutate(nonother = rowSums(across(all_of(sumvars)), na.rm=TRUE),
          othertax=tottax - nonother) %>%
   select(-nonother) %>%
   pivot_longer(-c(year, stabbr))
-tax_nominal  
+tax1
+summary(tax1) # good no NA values
+count(tax1, stabbr)
+count(tax1, name)
+tax1 %>% filter(is.na(value))
+tax1 %>% filter(stabbr=="AK")
 
+# determine first and last nonzero and nonmissing year for every state-tax combination
+# and keep just the years we want
+good_firstlast <- tax1 %>%
+  filter(value != 0, !is.na(value)) %>%
+  group_by(stabbr, name) %>%
+  summarise(first=min(year), last=max(year), .groups="drop") %>%
+  mutate(nyears=last - first + 1)
+summary(good_firstlast)
 
-tax_real <- tax_nominal %>%
+good_firstlast %>% filter(stabbr=="OH")
+sum(good_firstlast$nyears)
+
+tax2 <- tax1 %>%
+  left_join(good_firstlast, by = c("stabbr", "name")) %>%
+  filter(year >= first, year <=  last) %>%
+  select(stabbr, year, name, value)
+  
+tax1 %>% filter(stabbr=="CT", name=="iit")
+tax1 %>% filter(stabbr=="DE", name=="gst") # this looks wrong; make sure we don't calc volatility
+tax2 %>% filter(stabbr=="DE", name=="gst")
+
+tax_stack <- tax2 %>%
   rename(nominal=value) %>%
   left_join(gdppi %>% select(year, igdppi), by="year") %>%
   mutate(real=nominal * igdppi) %>%
   select(-igdppi) %>%
   pivot_longer(c(nominal, real), names_to="type")
 
+```
+
+
+```{r}
+# data checking
+# what to do about negative tax values?? they will become nan in logs, and we need to be robust to that
+# what about zero values in the middle that look like they must be missing
+# OH cit 2014 is negative (-$118)
+# NM cit has pos 1951-1954, zero 1955-1966, then positive
+
+tax_stack %>%
+  filter(value <= 0) %>%
+  as.data.frame()
+
+tax_stack %>%
+  filter(stabbr=="OH", name=="cit", type=="nominal")
+
+tax_stack %>%
+  filter(stabbr=="NM", name=="cit", type=="nominal")
+
+measures %>%
+  filter(stabbr=="OH", name=="cit", type=="nominal")
+```
+
+
+### Basic tax measures
+```{r}
+
+
+measures <- tax_stack %>%
+  group_by(stabbr, name, type) %>%
+  mutate(lvalue=log(value))
+
+#   nest() %>%
 
 ```
+
 
 
 ## Pew data on enacted revenue changes
@@ -526,28 +846,30 @@ saveRDS(pewlong, here::here("data", "pewlong.rds"))
 
 
 ```{r vol_measures}
-hp_df <- function(df, vname){
-  vts <- ts(df[vname])
-  vts_hp <- hpfilter(vts, freq=NULL, type=c("lambda"), drift=FALSE)
-  df %>% mutate(trend=as.numeric(vts_hp$trend),
-                cycle=as.numeric(vts_hp$cycle))
-}
-
-vol1 <- tax_real %>%
-  filter(name=="tottax") %>%
-  group_by(stabbr, name, type) %>%
-  arrange(year) %>%
-  hp_df(., "value")
-  
+# hp_df <- function(df, vname){
+#   vts <- ts(df[vname])
+#   vts_hp <- hpfilter(vts, freq=NULL, type=c("lambda"), drift=FALSE)
+#   df %>% mutate(trend=as.numeric(vts_hp$trend),
+#                 cycle=as.numeric(vts_hp$cycle))
+# }
 
 
+# takes a LONG LONG time
+# vol1 <- tax_real %>%
+#   filter(name=="tottax") %>%
+#   group_by(stabbr, name, type) %>%
+#   arrange(year) %>%
+#   hp_df(., "value")
+#   
 
-df <- df %>%
-  f(., "iit") %>%
-  mutate(dtrend=cycle / trend * 100,
-         pch=iit / iit[match(year - 1, year)] * 100 - 100,
-         dtrend_sd10=rollsd_p(dtrend, 10),
-         pch_sd10=rollsd_p(pch, 10))
+
+
+# df <- df %>%
+#   f(., "iit") %>%
+#   mutate(dtrend=cycle / trend * 100,
+#          pch=iit / iit[match(year - 1, year)] * 100 - 100,
+#          dtrend_sd10=rollsd_p(dtrend, 10),
+#          pch_sd10=rollsd_p(pch, 10))
 
 
 ```
@@ -636,6 +958,70 @@ df %>%
 ```
 
 
+## Calculate volatility measures
+
+```{r vfunctions}
+hp_df <- function(df, vname, smooth=NULL){
+  vts <- ts(df[vname])
+  vts_hp <- hpfilter(vts, freq=smooth, type=c("lambda"), drift=FALSE)
+  df %>% 
+    mutate(trend=as.numeric(vts_hp$trend),
+           cycle=as.numeric(vts_hp$cycle))
+}
+
+```
+
+
+```{r}
+tax_stacked
+count(tax_stacked, name)
+tax_stacked %>% 
+  filter(type=="nominal", name=="tottax") %>%
+  group_by(stabbr) %>%
+  summarise(firstyear=min(year),
+            lastyear=max(year))  # 1951-2019
+
+# differences from actual revenue
+# prep the tax file -- determine first year of each series!!! and start there
+taxprep <- tax_stacked %>%
+  arrange(stabbr, name, type, year) %>%
+  group_by(stabbr, name, type) %>%
+  mutate(ratio=value / value[match(year - 1,  year)],
+         logpch=log(ratio) * 100,
+         pch=value / value[match(year - 1,  year)] * 100 - 100)
+taxprep
+# note logpch warning in  stabbr = "OH", name = "cit",
+
+# separate files with the different measures
+# hpfilter all items
+
+hp2 <- function(df, vname, smooth=NULL){
+  vts <- ts(df[vname])
+  vts_hp <- hpfilter(vts, freq=smooth, type=c("lambda"), drift=FALSE)
+  tibble(trend=as.numeric(vts_hp$trend),
+         cycle=as.numeric(vts_hp$cycle))
+}
+
+a <- proc.time()
+hpall <- tax_stacked %>%
+  # filter(stabbr=="OH") %>%
+  group_by(stabbr, name, type) %>%
+  nest()  %>%
+  mutate(hp=map(data, hp2, "value", smooth=100))
+b <- proc.time() 
+b - a
+
+glimpse(hpall)
+
+hpall %>%
+  filter(stabbr=="OH", type=="nominal", name=="cit") %>%
+  unnest(cols = c(data, hp))
+
+
+```
+
+
+
 # Materials for report, organized by topic
 
 ## Introduction and motivation
@@ -721,12 +1107,167 @@ ggsave(filename = here::here("results", "tax_gdp_us.png"), plot = p2)
 # Appendix
 
 ## Colorado revenue volatility review
-```{r}
-vol1 <- tax_real %>%
-  filter(name=="tottax", stabbr=="CO", year %in% 1993:2017) %>%
+```{r covol}
+
+
+# lambda
+freq <- 1
+lam <- (2 * sin(pi / freq))^(-4)  # lambda w/freq=1: 2.779035e+62
+
+
+conom <- slgfin %>%
+  filter(stabbr=="CO", level==2, aggvar=="osr", year %in% 1992:2017) %>%
+  arrange(year)
+
+cohp <- conom %>%
+  mutate(return=value / lag(value),
+         dreturn=log(return) * 100) %>%
+  filter(year %in% 1993:2017) %>%
+  hp_df(., "dreturn", smooth=1600) %>%
+  mutate(vol=cycle)
+sum(cohp$cycle)
+
+cohp_dtrend <- conom %>%
+  filter(year %in% 1993:2017) %>%
+  hp_df(., "value", smooth=1600) %>%
+  mutate(vol=cycle / trend * 100)
+
+comp <- bind_rows(cohp %>% select(year, vol) %>% mutate(name="dpch"),
+                  cohp_dtrend %>% select(year, vol) %>% mutate(name="dtrend"))
+
+comp %>% 
+  pivot_wider(values_from = vol)
+  
+
+cohp %>%
+  mutate(vol=cycle) %>%
+  ggplot(aes(year, vol)) +
+  geom_bar(stat="identity", fill="blue") +
+  scale_x_continuous(breaks=1993:2017) +
+  scale_y_continuous(breaks=seq(-20, 20, 2.5)) +
+  theme(axis.text.x = element_text(angle = 45, vjust=0, hjust=0))
+
+cohp %>%
+  select(year, dreturn, trend) %>%
+  pivot_longer(cols=-year) %>%
+  ggplot(aes(year, value, colour=name)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = 0)
+
+comp %>%
+  ggplot(aes(year, vol, colour=name)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = 0)
+
+# djb new start ----
+param <- 1600
+
+cohp <- conom %>%
+  mutate(return=value / lag(value),
+         dreturn=log(return) * 100) %>%
+  filter(year %in% 1993:2017) %>%
+  hp_df(., "dreturn", smooth=param) %>%
+  mutate(vol=cycle)
+
+cohp_dtrend <- conom %>%
+  filter(year %in% 1993:2017) %>%
+  hp_df(., "value", smooth=param) %>%
+  mutate(vol=cycle / trend * 100)
+
+comp <- bind_rows(cohp %>% select(year, vol) %>% mutate(name="dpch"),
+                  cohp_dtrend %>% select(year, vol) %>% mutate(name="dtrend"))
+
+p <- comp %>%
+  filter(year %in% 1993:2017) %>%
+  mutate(name=factor(name,
+                     levels=c("dpch", "dtrend"),
+                     labels=c("Calculated as footnote describes",
+                              "Calculated as graph is labeled"))) %>%
+  ggplot(aes(year, vol)) +
+  geom_bar(stat="identity", fill="blue") +
+  scale_x_continuous(name=NULL, breaks=1993:2017) +
+  scale_y_continuous(name="Percent", breaks=seq(-20, 20, 5), limits=c(-15, 10)) +
+  facet_wrap(~name, ncol=1) +
+  ggtitle("Colorado's revenue deviation from trend calculated two ways",
+          subtitle=paste0("HP filter smoothing parameter: ", param)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust=0.5, hjust=0.5))
+p
+
+
+
+cotaxhp <- slgfin %>%
+  filter(stabbr=="CO", level==2, aggvar=="tottax", year %in% 1992:2017) %>%
+  arrange(year) %>%
+  mutate(return=value / lag(value),
+         dreturn=log(return) * 100) %>%
+  filter(year %in% 1993:2017) %>%
+  hp_df(., "dreturn", smooth=1600)
+
+cohp %>%
+  select(year, cycle) %>%
+  mutate(name="osr") %>%
+  bind_rows(cotaxhp %>% 
+              select(year, cycle) %>%
+              mutate(name="tax")) %>%
+  ggplot(aes(year, cycle, colour=name)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = 0)
+
+co_vol <- tax_stacked %>%
+  filter(name=="tottax", type=="real", stabbr=="CO", year %in% 1993:2017) %>%
   group_by(stabbr, name, type) %>%
   arrange(year) %>%
   hp_df(., "value")
+
+
+co_vol %>%
+  mutate(vol= cycle / trend * 100) %>%
+  ggplot(aes(year, vol)) +
+  geom_bar(stat="identity")
+
+
+co_vol2 <- tax_stacked %>%
+  filter(name=="tottax", type=="nominal", stabbr=="CO", year %in% 1992:2017) %>%
+  group_by(stabbr, name, type) %>%
+  arrange(year) %>%
+  mutate(return=value / lag(value),
+         dreturn=log(return) * 100) %>%
+  filter(year %in% 1993:2017) %>%
+  hp_df(., "dreturn")
+
+co_vol2
+
+co_vol2 %>%
+  mutate(vol= cycle / trend * 100) %>%
+  ggplot(aes(year, vol)) +
+  geom_bar(stat="identity")
+
+tax_stacked %>%
+  filter(name=="tottax", type=="nominal", stabbr=="CO", year %in% 1992:2017) %>%
+  group_by(stabbr, name, type) %>%
+  arrange(year) %>%
+  mutate(pch=value / lag(value) * 100 - 100) %>%
+  filter(year %in% 1993:2017) %>%
+  mutate(diff=pch - median(pch))
+
+
+data(package="bdata")
+
+tmp <- slgfin %>%
+  filter(stabbr=="CO", level==2, aggvar=="osr", year %in% 1992:2017)
+
+cov3 <- tmp %>%
+  arrange(year) %>%
+  mutate(return=value / lag(value),
+         dreturn=log(return) * 100) %>%
+  filter(year %in% 1993:2017) %>%
+  hp_df(., "dreturn") %>%
+  filter(year %in% 1993:2017)
+
 
 ```
 

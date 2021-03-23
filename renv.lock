@@ -13,7 +13,9 @@
       "Package": "BEAData",
       "Version": "0.6.0",
       "Source": "Local",
-      "Hash": "9acb704bd64ccc0831ddc392a8e952cd"
+      "RemoteType": "local",
+      "RemoteUrl": "C:/RPrograms\nPC/ProjectsCurrent/Pew_Revenue_Volatility/renv/local/BEAData_0.6.0.tar.gz",
+      "Hash": "3a411e4740aa9108ecdbdac1e031aa68"
     },
     "BH": {
       "Package": "BH",
@@ -45,10 +47,10 @@
     },
     "MASS": {
       "Package": "MASS",
-      "Version": "7.3-53.1",
+      "Version": "7.3-53",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "4ef21dd0348b9abb7f8bd1d77e4cd0c3"
+      "Hash": "d1bc1c8e9c0ace57ec9ffea01021d45f"
     },
     "Matrix": {
       "Package": "Matrix",
@@ -162,9 +164,11 @@
     },
     "bdata": {
       "Package": "bdata",
-      "Version": "0.6",
+      "Version": "0.7",
       "Source": "Local",
-      "Hash": "e6566b7cb79ddd6a8abddacae0ea65a6"
+      "RemoteType": "local",
+      "RemoteUrl": "C:/RPrograms\nPC/ProjectsCurrent/Pew_Revenue_Volatility/renv/local/bdata_0.7.tar.gz",
+      "Hash": "a747a9f16228a57227d0bd2843a08425"
     },
     "blob": {
       "Package": "blob",
@@ -198,7 +202,9 @@
       "Package": "btools",
       "Version": "0.9",
       "Source": "Local",
-      "Hash": "c855c04127a9f166d993197807792b24"
+      "RemoteType": "local",
+      "RemoteUrl": "C:/RPrograms\nPC/ProjectsCurrent/Pew_Revenue_Volatility/renv/local/btools_0.9.tar.gz",
+      "Hash": "920ad55b002ccd7d8e004ad92956abac"
     },
     "cachem": {
       "Package": "cachem",
@@ -391,10 +397,10 @@
     },
     "fabletools": {
       "Package": "fabletools",
-      "Version": "0.3.0",
+      "Version": "0.3.1",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "69fa686e21f00f5519bec8cffcde2abc"
+      "Hash": "4a1f396153db9cefd9e6473916b3f9f4"
     },
     "fansi": {
       "Package": "fansi",
@@ -426,10 +432,10 @@
     },
     "forecast": {
       "Package": "forecast",
-      "Version": "8.13",
+      "Version": "8.14",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "5bcea1dc180e1461282bbafcc35cd34e"
+      "Hash": "63db896e027c5d81b56791d65c2a6a91"
     },
     "fracdiff": {
       "Package": "fracdiff",
@@ -578,13 +584,6 @@
       "Repository": "CRAN",
       "Hash": "6fdaa86d0700f8b3e92ee3c445a5a10d"
     },
-    "httpuv": {
-      "Package": "httpuv",
-      "Version": "1.5.5",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "b9d5d39be2150cf86538b8488334b8f8"
-    },
     "httr": {
       "Package": "httr",
       "Version": "1.4.2",
@@ -601,10 +600,10 @@
     },
     "ipred": {
       "Package": "ipred",
-      "Version": "0.9-10",
+      "Version": "0.9-11",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "431eef340f51dab6ba8f0f9f2c1b6e78"
+      "Hash": "c5d91d6045b8cd091d40b58b247cabb7"
     },
     "isoband": {
       "Package": "isoband",
@@ -664,10 +663,10 @@
     },
     "lava": {
       "Package": "lava",
-      "Version": "1.6.8.1",
+      "Version": "1.6.9",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "4f337c8dcd7fdf0df89ee74c4f5d94d5"
+      "Hash": "25957dc1105e701678bcb1241b162dfc"
     },
     "lazyeval": {
       "Package": "lazyeval",
@@ -675,20 +674,6 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "d908914ae53b04d4c0c0fd72ecc35370"
-    },
-    "leaflet": {
-      "Package": "leaflet",
-      "Version": "2.0.4.1",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "e3d73becdeb92754d27172d278cbf61d"
-    },
-    "leaflet.providers": {
-      "Package": "leaflet.providers",
-      "Version": "1.9.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "d3082a7beac4a1aeb96100ff06265d7e"
     },
     "lifecycle": {
       "Package": "lifecycle",
@@ -748,10 +733,10 @@
     },
     "mgcv": {
       "Package": "mgcv",
-      "Version": "1.8-34",
+      "Version": "1.8-33",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "bd4a6c4b600f58651d60d381b0e9a397"
+      "Hash": "eb7b6439bc6d812eed2cddba5edc6be3"
     },
     "mime": {
       "Package": "mime",
@@ -811,10 +796,10 @@
     },
     "parallelly": {
       "Package": "parallelly",
-      "Version": "1.23.0",
+      "Version": "1.24.0",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "2f841d7915986a8fd995ab4ec105dd1b"
+      "Hash": "3d77980bde8c8fe48dc0c24dcb014b39"
     },
     "pillar": {
       "Package": "pillar",
@@ -858,13 +843,6 @@
       "Repository": "CRAN",
       "Hash": "ec0e5ab4e5f851f6ef32cd1d1984957f"
     },
-    "png": {
-      "Package": "png",
-      "Version": "0.1-7",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "03b7076c234cb3331288919983326c55"
-    },
     "polynom": {
       "Package": "polynom",
       "Version": "1.4-0",
@@ -878,18 +856,6 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "a555924add98c99d2f411e37e7d25e9f"
-    },
-    "precis": {
-      "Package": "precis",
-      "Version": "0.0.0.9000",
-      "Source": "GitHub",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "precis",
-      "RemoteUsername": "hadley",
-      "RemoteRef": "master",
-      "RemoteSha": "93213f8a71525b3f05329356af883af07fd45c2b",
-      "Hash": "919f36246726794ed4c22e6c737f2544"
     },
     "prettyunits": {
       "Package": "prettyunits",
@@ -968,13 +934,6 @@
       "Repository": "CRAN",
       "Hash": "5e3c5dc0b071b21fa128676560dbe94d"
     },
-    "raster": {
-      "Package": "raster",
-      "Version": "3.4-5",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "a3ded548110163cf499d63c3932dd499"
-    },
     "rcmdcheck": {
       "Package": "rcmdcheck",
       "Version": "1.3.3",
@@ -1026,10 +985,15 @@
     },
     "renv": {
       "Package": "renv",
-      "Version": "0.13.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "9f10d9db5b50400c348920c5c603385e"
+      "Version": "0.13.0-17",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "renv",
+      "RemoteUsername": "rstudio",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "b9012e4dcfbd0c83462b02cb725f72d8115a7291",
+      "Hash": "f8e714911a97a1ee81763d01be9ac18d"
     },
     "reprex": {
       "Package": "reprex",
@@ -1136,13 +1100,6 @@
       "Repository": "CRAN",
       "Hash": "3838071b66e0c566d55cc26bd6e27bf4"
     },
-    "servr": {
-      "Package": "servr",
-      "Version": "0.21",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "48d1289a847c801b3f0e76fc619fa65d"
-    },
     "sessioninfo": {
       "Package": "sessioninfo",
       "Version": "1.1.1",
@@ -1163,13 +1120,6 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "4079070fc210c7901c0832a3aeab894f"
-    },
-    "sp": {
-      "Package": "sp",
-      "Version": "1.4-5",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "dfd843ee98246cf932823acf613b05dd"
     },
     "splus2R": {
       "Package": "splus2R",
@@ -1341,10 +1291,10 @@
     },
     "utf8": {
       "Package": "utf8",
-      "Version": "1.1.4",
+      "Version": "1.2.1",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "4a5081acfb7b81a572e4384a7aaf2af1"
+      "Hash": "c3ad47dc6da0751f18ed53c4613e3ac7"
     },
     "vctrs": {
       "Package": "vctrs",
@@ -1352,13 +1302,6 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "5cf1957f93076c19fdc81d01409d240b"
-    },
-    "viridis": {
-      "Package": "viridis",
-      "Version": "0.5.1",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "6f6b49e5b3b5ee5a6d0c28bf1b4b9eb3"
     },
     "viridisLite": {
       "Package": "viridisLite",
@@ -1402,19 +1345,12 @@
       "Repository": "CRAN",
       "Hash": "caf4781c674ffa549a4676d2d77b13cc"
     },
-    "xaringan": {
-      "Package": "xaringan",
-      "Version": "0.20",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "ed315d71e31ce90d6369162cde071be9"
-    },
     "xfun": {
       "Package": "xfun",
-      "Version": "0.21",
+      "Version": "0.22",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "f3ddcca198959a42e8cb6b06c30d4f1e"
+      "Hash": "eab2f8ba53809c321813e72ecbbd19ba"
     },
     "xml2": {
       "Package": "xml2",
