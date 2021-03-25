@@ -147,6 +147,8 @@ git pull is a convenient shortcut for completing both git fetch and git merge in
 $ git pull remotename branchname
 # Grabs online updates and merges them with your local work
 
+
+
 git checkout -b issue-5  # create branch and checkout branch
 
 work on changes, then
