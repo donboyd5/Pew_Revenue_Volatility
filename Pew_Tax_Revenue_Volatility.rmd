@@ -158,6 +158,8 @@ Once you have done your work and committed it to the feature branch, you can swi
 git checkout master
 git merge issue-5
 
+
+etc.
 -->
 
 
