@@ -505,18 +505,24 @@ mtables <- count(tmp, tabname)
 Steps:
 
 1.    Get Census state govt tax data from bdata (previously created)
-2.    
+2.    Keep desired taxes and create an other taxes category
+3.    Identify and explore anomalies
 
 ```{r get_tax}
+# tax1 has untouched data from Census, only the items we want, long format
+# tax2 is same, but with the other tax variable
+
 
 glimpse(sgtax.a)  # 2019 end year; most values from ~1951+
 # count(sgtax.a, year) %>% as.data.frame()
 # count(sgtax.a, item, desc)
 
+# determine the tax items we want
 taxnames <- sgtax.a %>% select(item, desc) %>% distinct()
 items <- c("C105", "T09", "C109", "T40", "T41", "T53")
 varnames <- c("tottax", "gst", "selsalestax", "iit", "cit", "sevtax")
 sumvars <- setdiff(varnames, "tottax")
+
 
 tax1 <- sgtax.a %>%
   filter(year >= 1951) %>%
@@ -524,8 +530,18 @@ tax1 <- sgtax.a %>%
   mutate(name=factor(item, levels=items, labels=varnames)) %>%
   select(stabbr, name, year, value) %>%
   arrange(stabbr, name, year)
-
 summary(tax1)  # no missing values
+
+# tax2 creates a wide version
+tax2 <- tax1 %>%
+  # now calculate other tax
+  pivot_wider(names_from = name) %>%
+  mutate(nonother = rowSums(across(all_of(sumvars)), na.rm=TRUE),
+         othertax=tottax - nonother) %>%
+  select(-nonother) %>%
+  pivot_longer(-c(year, stabbr)) %>%
+  filter(!is.na(value))  # we can safely drop NA values because we didn't have any in tax1
+summary(tax2)
 
 ```
 
