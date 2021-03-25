@@ -485,8 +485,15 @@ sfy_startmonths <- tibble(stabbr=state.abb) %>%
                               stabbr %in% c("AL", "MI") ~ 10,
                               TRUE ~ 7))
 
+# saveRDS(sfy_startmonths, here::here("data", "sfy_startmonths.rds"))
 
 ```
+
+```{r save_general}
+save(sfy_startmonths, file = here::here("data", "general.RData"))
+
+```
+
 
 ## NIPA national data
 
@@ -598,6 +605,12 @@ mtables <- count(tmp, tabname)
 # stock market
 # manufacturing, tourism, other sectors
 # unemployment rate
+
+```
+    
+    
+```{r save_econ_national}
+save(gdpfy, gdppi, recessions, file = here::here("data", "econ_national.RData"))
 
 ```
     
@@ -817,8 +830,16 @@ taxkeep <- anomalies_v3 %>%
   ungroup
 summary(taxkeep)
 glimpse(taxkeep)
+# saveRDS(taxkeep, here::here("data", "taxkeep.rds"))
 
 ```
+
+
+```{r save_taxdata}
+save(taxkeep, file=here::here("data", "taxdata.RData"))
+
+```
+
 
 
 ```{r tax_data, eval=TRUE}
@@ -1137,6 +1158,26 @@ hpall %>%
 
 
 # Materials for report, organized by topic
+
+## Get previously created data
+```{r get_data}
+# clear objects from the workspace
+rm(list=ls(all=TRUE))
+
+# now load just what we want
+source(here::here("r", "functions.r"))
+load(file = here::here("data", "general.RData"), verbose=TRUE)
+load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
+load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
+
+```
+
+
+```{r measures}
+
+```
+
+
 
 ## Introduction and motivation
 
