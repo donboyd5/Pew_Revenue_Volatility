@@ -99,6 +99,9 @@ The general workflow when working with renv is:
 
 -->
 
+```{r gitnotes}
+
+```
 
 <!-- git notes:
 https://happygitwithr.com/git-commands.html
@@ -179,6 +182,27 @@ git reset --hard develop master
 some comments
 
 -->
+
+
+```{r git_workflow, eval=FALSE}
+# when starting work from a different computer
+# - pull project from remote
+# git checkout -b issue-5  # create branch and checkout branch
+# Stage local changes, commit, check status:
+# git add foo.txt
+# git commit --message "A commit message"
+# git status
+
+# now merge
+# git checkout master
+# git merge issue-5
+
+# then push
+# git push
+
+
+```
+
 
 
 ```{r renv_notes, eval=FALSE}
