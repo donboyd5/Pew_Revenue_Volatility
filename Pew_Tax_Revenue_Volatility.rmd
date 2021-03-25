@@ -160,6 +160,21 @@ git merge issue-5
 
 
 etc. one last change
+
+git checkout master
+git pull origin master will bring your master branch up to date with the remote repository
+
+if you want to make develop be identical to master, the simplest way is just to recreate the pointer:
+
+git branch -f develop master
+e.g.
+git branch -f linbranch main
+
+Or, if you already have develop checked out:
+
+git reset --hard develop master
+
+
 -->
 
 
@@ -237,6 +252,7 @@ source(here::here("r", "libs_ts.r"))
 source(here::here("r", "functions.r"))
 devtools::session_info()
 # devtools::package_info()
+# newq
 
 ```
 
