@@ -648,7 +648,7 @@ anomalies %>% filter(stabbr=="SD", name=="sevtax")
 anomalies %>% filter(gap)
 
 
-
+# new line added here
 
 anomalies %>% 
   filter(stabbr=="NV", name=="sevtax") %>%
