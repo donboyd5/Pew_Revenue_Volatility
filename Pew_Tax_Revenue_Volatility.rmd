@@ -255,7 +255,6 @@ source(here::here("r", "libs_ts.r"))
 source(here::here("r", "functions.r"))
 devtools::session_info()
 # devtools::package_info()
-# newq
 
 ```
 
@@ -613,7 +612,7 @@ tax1 <- sgtax.a %>%
   arrange(stabbr, name, year)
 summary(tax1)  # no missing values
 
-# tax2 creates a wide version
+# tax2 calculates other tax
 tax2 <- tax1 %>%
   # now calculate other tax
   pivot_wider(names_from = name) %>%
@@ -729,108 +728,83 @@ anomalies %>% filter(stabbr=="SD", name=="sevtax")
 anomalies %>% filter(gap)
 
 
-# new line added here
-
 anomalies %>% 
   filter(stabbr=="NV", name=="sevtax") %>%
   lastgap()
+# note that NV sevtax jumped way up after 1987 -- investigate
 
 # rules:
 # - drop all lead zero and trail zero
 # - take the post gap periods
 # individually and decide - take the post gap
 
-anomalies2 <- anomalies %>%
+# get rid of leading and trailing zeros
+anomalies_v2 <- anomalies %>%
   filter(!(leadzero | trailzero))
-
-
-ibad <- which(a %in% c(0, NA_real_))
-Position(f, x, right = FALSE, nomatch = NA_integer)
-
-
-anomalies %>%
-  select(stabbr, name, firstyear) %>%
-  unique() %>%
-  filter(firstyear != 1951)
-
-anomalies %>%
-  select(stabbr, name, fy2) %>%
-  unique() %>%
-  filter(fy2 != 1951)
-
-# text added from winbranch
-
-# text added from linbranch
 
 ```
 
 
+```{r anomalies_gaps}
+# explore the gaps -- the only bad items -- and decide what to keep
+summary(anomalies_v2)
 
+# what gaps do we have?
+gaps <- anomalies_v2 %>%
+  group_by(stabbr, name) %>%
+  filter(any(gap != 0)) %>%
+  ungroup
+
+count(gaps, stabbr, name) # only 7 combinations
+
+gaps %>%
+  group_by(stabbr, name) %>%
+  summarise(gap_start=min(year[gap==TRUE]))
+
+anomalies_v2 %>% filter(stabbr=="AZ", name=="cit")
+anomalies_v2 %>% filter(stabbr=="CO", name=="sevtax")  # 2017 is zero; some big changes in early years
+anomalies_v2 %>% filter(stabbr=="MO", name=="sevtax")  # a string of zeroes before 1978
+anomalies_v2 %>% filter(stabbr=="NH", name=="sevtax") # we'll want to drop this for other reasons
+anomalies_v2 %>% filter(stabbr=="NM", name=="cit")  # 1967+ is good
+anomalies_v2 %>% filter(stabbr=="NV", name=="sevtax") # 1988+ is good - low values or zero prior
+anomalies_v2 %>% filter(stabbr=="SD", name=="sevtax") # 1976+ is good
+
+# there are only 7 so identify them by hand
+gapkeep <- tribble(~stabbr, ~name, ~year1, ~year2,
+                   "AZ", "cit", 1958, 2019,
+                   "CO", "sevtax", 1951, 2016,
+                   "MO", "sevtax", 1978, 2019,
+                   "NH", "sevtax", 1951, 1987,
+                   "NM", "cit", 1967, 2019,
+                   "NV", "sevtax", 1988, 2019,
+                   "SD", "sevtax", 1976, 2019,
+                   ) 
+gapkeep
+
+anomalies_v3 <- anomalies_v2 %>%
+  left_join(gapkeep, by=c("stabbr", "name")) %>%
+  mutate(drop=ifelse(!is.na(year1) & {(year < year1) | (year > year2)},
+                     TRUE, FALSE)) %>%
+  filter(!drop)
+anomalies_v3 %>% filter(stabbr=="SD", name=="sevtax") 
+
+taxkeep <- anomalies_v3 %>%
+  select(stabbr, name, year, value) %>%
+  ungroup
+summary(taxkeep)
+glimpse(taxkeep)
+
+```
 
 
 ```{r tax_data, eval=TRUE}
-glimpse(sgrev)
 
-
-glimpse(sgtax.a)  # 2019 end year; most values from ~1951+
-# count(sgtax.a, year) %>% as.data.frame()
-# count(sgtax.a, item, desc)
-
-# data(package="BEAData")
-
-
-# collapse taxes
-taxnames <- sgtax.a %>% select(item, desc) %>% distinct()
-items <- c("C105", "T09", "C109", "T40", "T41", "T53")
-varnames <- c("tottax", "gst", "selsalestax", "iit", "cit", "sevtax")
-sumvars <- setdiff(varnames, "tottax")
-
-tax1 <- sgtax.a %>%
-  filter(year >= 1951) %>%
-  filter(item %in% items) %>%
-  mutate(name=factor(item, levels=items, labels=varnames)) %>%
-  select(stabbr, name, year, value) %>%
-  
-  # now calculate other tax
-  pivot_wider(names_from = name) %>%
-  mutate(nonother = rowSums(across(all_of(sumvars)), na.rm=TRUE),
-         othertax=tottax - nonother) %>%
-  select(-nonother) %>%
-  pivot_longer(-c(year, stabbr))
-tax1
-summary(tax1) # good no NA values
-count(tax1, stabbr)
-count(tax1, name)
-tax1 %>% filter(is.na(value))
-tax1 %>% filter(stabbr=="AK")
-
-# determine first and last nonzero and nonmissing year for every state-tax combination
-# and keep just the years we want
-good_firstlast <- tax1 %>%
-  filter(value != 0, !is.na(value)) %>%
-  group_by(stabbr, name) %>%
-  summarise(first=min(year), last=max(year), .groups="drop") %>%
-  mutate(nyears=last - first + 1)
-summary(good_firstlast)
-
-good_firstlast %>% filter(stabbr=="OH")
-sum(good_firstlast$nyears)
-
-tax2 <- tax1 %>%
-  left_join(good_firstlast, by = c("stabbr", "name")) %>%
-  filter(year >= first, year <=  last) %>%
-  select(stabbr, year, name, value)
-  
-tax1 %>% filter(stabbr=="CT", name=="iit")
-tax1 %>% filter(stabbr=="DE", name=="gst") # this looks wrong; make sure we don't calc volatility
-tax2 %>% filter(stabbr=="DE", name=="gst")
-
-tax_stack <- tax2 %>%
-  rename(nominal=value) %>%
-  left_join(gdppi %>% select(year, igdppi), by="year") %>%
-  mutate(real=nominal * igdppi) %>%
-  select(-igdppi) %>%
-  pivot_longer(c(nominal, real), names_to="type")
+# tax_stack <- tax2 %>%
+#   rename(nominal=value) %>%
+#   left_join(gdppi %>% select(year, igdppi), by="year") %>%
+#   mutate(real=nominal * igdppi) %>%
+#   select(-igdppi) %>%
+#   pivot_longer(c(nominal, real), names_to="type")
 
 ```
 
