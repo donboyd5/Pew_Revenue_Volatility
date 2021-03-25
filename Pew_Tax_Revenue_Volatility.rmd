@@ -647,6 +647,9 @@ anomalies %>% filter(stabbr=="NV", name=="sevtax")
 anomalies %>% filter(stabbr=="SD", name=="sevtax")
 anomalies %>% filter(gap)
 
+
+
+
 anomalies %>% 
   filter(stabbr=="NV", name=="sevtax") %>%
   lastgap()
