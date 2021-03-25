@@ -100,6 +100,66 @@ The general workflow when working with renv is:
 -->
 
 
+<!-- git notes:
+https://happygitwithr.com/git-commands.html
+https://www.geos.ed.ac.uk/~smudd/NMDM_Course/html/more_advanced_github.html
+
+
+git clone https://github.com/USERNAME/REPOSITORY.git  # get a repository (probably mine)
+
+Check the remote was cloned successfully:
+git remote --verbose
+
+Stage local changes, commit:
+git add foo.txt
+git commit --message "A commit message"
+
+Check on the state of the Git world:
+git status
+git log
+git log --oneline
+
+Compare versions:
+
+git diff
+
+Add a remote to existing local repo:
+
+git remote add origin https://github.com/jennybc/happy-git-with-r
+git remote --verbose
+git remote show origin
+
+Push local master to GitHub master and have local master track master on GitHub:
+
+git push --set-upstream origin master
+## shorter form
+git push -u origin master
+## you only need to set upstream tracking once!
+
+$ git fetch remotename
+# Fetches updates made to a remote repository
+
+$ git merge remotename/branchname
+# Merges updates made online with your local work
+
+git pull is a convenient shortcut for completing both git fetch and git merge in the same command:
+
+$ git pull remotename branchname
+# Grabs online updates and merges them with your local work
+
+git checkout -b issue-5  # create branch and checkout branch
+
+work on changes, then
+git commit --all -m "WIP"
+git checkout master
+
+Once you have done your work and committed it to the feature branch, you can switch back to master and merge the feature branch.
+
+git checkout master
+git merge issue-5
+
+-->
+
 
 ```{r renv_notes, eval=FALSE}
 # https://rstudio.github.io/renv/articles/renv.html
