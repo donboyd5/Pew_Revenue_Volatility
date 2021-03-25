@@ -613,7 +613,7 @@ firstgap <- function(gap) {
 
 
 lastgap <- function(gap) {
-  # index of the 
+  # index of the final observation in last gap
   ifelse(all(gap !=TRUE, na.rm=TRUE),
          -Inf, # return -Inf if there is no gap in the series
          tail(which(gap==TRUE), 1)) # index of the final observation in the last gap of a series
