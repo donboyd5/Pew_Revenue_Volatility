@@ -561,64 +561,80 @@ Identify and explore anomalies:
 # identify different anomalies
 # CO sevtax  2017 0
 # OH cit 2014 -118 
-tax1 %>% filter(stabbr=="AK", name=="iit")
-tax1 %>% filter(stabbr=="AK", name=="gst")
-tax1 %>% filter(stabbr=="AZ", name=="sevtax")
-tax1 %>% filter(stabbr=="CO", name=="sevtax")
-tax1 %>% filter(stabbr=="OH", name=="cit")
-tax1 %>% filter(stabbr=="NH", name=="sevtax")
-tax1 %>% filter(stabbr=="SD", name=="sevtax")
+tax2 %>% filter(stabbr=="AK", name=="iit")
+tax2 %>% filter(stabbr=="AK", name=="gst")
+tax2 %>% filter(stabbr=="AZ", name=="sevtax")
+tax2 %>% filter(stabbr=="CO", name=="sevtax")
+tax2 %>% filter(stabbr=="OH", name=="cit")
+tax2 %>% filter(stabbr=="NH", name=="sevtax")
+tax2 %>% filter(stabbr=="SD", name=="sevtax")
 
+# vectors used to test the functions below
 a1 <- c(0, 0, NA, 1, 2, 3, 0, 4, 5, 6, 0, 0)
 a2 <- c(0, 0, 0, 0)
 a3 <- c(0, NA, 0, 0)
 a4 <- c(7, 9, 0, 0, NA, 1, 2, 3, 0, 4, 5, 6)
 
 firstnz <- function(x) {
+  # find index of first nonzero value, to help us identify zeroes at the start
   ifelse(all(x==0, na.rm=TRUE), 
          Inf, 
          which(x != 0)[[1]])
 }
+
+# test firstnz
 firstnz(a1)
 firstnz(a2)
 firstnz(a3)
 firstnz(a4)
 
 lastnz <- function(x) {
+  # find index of last nonzero value, to help us identify zeroes at the end
   ifelse(all(x==0, na.rm=TRUE),
          -Inf, 
          tail(which(x != 0), 1))
 }
+
+# test lastnz
 lastnz(a1)
 lastnz(a2)
 lastnz(a3)
 lastnz(a4)
 
+
 firstgap <- function(gap) {
+  # gap is a a vector of 0 or 1 indicators for a series
+  # 0 indicates the observation is not part of a gap and 1 indicates it is part of a gap
+  # firstgap finds the index at which a gap in a series starts (if a gap exists)
   ifelse(all(gap !=TRUE, na.rm=TRUE),
-         Inf, 
-         which(gap==TRUE)[[1]]) # first gap
+         Inf, # return Inf if there is no gap in the series
+         which(gap==TRUE)[[1]]) # index of the start of the first gap
 }
 
 
 lastgap <- function(gap) {
+  # index of the 
   ifelse(all(gap !=TRUE, na.rm=TRUE),
-         -Inf, 
-         tail(which(gap==TRUE), 1)) # first gap
+         -Inf, # return -Inf if there is no gap in the series
+         tail(which(gap==TRUE), 1)) # index of the final observation in the last gap of a series
 }
 
 
-anomalies <- tax1 %>%
+# identify anomalies within each state-tax combination
+# also, for series that have gaps in them, identify observations that occur before the first gap or
+# after the last gap, as we will only want to keep one or the other
+anomalies <- tax2 %>%
   group_by(stabbr, name) %>%
-  mutate(missval = is.na(value),
+  mutate(missval = is.na(value),  # we should not have any missing values but check anyway
          zeroval = value == 0,
          negval = value < 0,
-         leadzero = row_number() < firstnz(value),
-         trailzero = row_number() > lastnz(value),
-         gap = zeroval & !(leadzero | trailzero),
-         pregap = row_number() < firstgap(gap),   # before the first gap
-         postgap = row_number() > lastgap(gap))   # after the last gap
+         leadzero = row_number() < firstnz(value),   # identify all leading-zero rows
+         trailzero = row_number() > lastnz(value),  # identify all trailing-zero rows
+         gap = zeroval & !(leadzero | trailzero),  # a gap occurs if we have a zero that is not leading or trailing
+         pregap = row_number() < firstgap(gap),   # identify data that occurs before the first gap
+         postgap = row_number() > lastgap(gap))   # identify data that occurs after the last gap
 summary(anomalies)
+# what should we do if a series has multiple gaps?? look to make sure it doesn't happen; I don't think so
 
 anomalies %>% filter(stabbr=="AK", name=="iit")
 anomalies %>% filter(stabbr=="AK", name=="gst")
@@ -644,9 +660,6 @@ anomalies2 <- anomalies %>%
   filter(!(leadzero | trailzero))
 
 
-
-
-
 ibad <- which(a %in% c(0, NA_real_))
 Position(f, x, right = FALSE, nomatch = NA_integer)
 
@@ -660,8 +673,6 @@ anomalies %>%
   select(stabbr, name, fy2) %>%
   unique() %>%
   filter(fy2 != 1951)
-
-# mutate(gap = exercise_id - lag(exercise_id, default = 0))
 
 
 ```
