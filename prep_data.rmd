@@ -165,12 +165,6 @@ some comments
 -->
 
 
-```{r git_workflow, eval=FALSE}
-
-
-```
-
-
 
 ```{r renv_notes, eval=FALSE}
 # https://rstudio.github.io/renv/articles/renv.html

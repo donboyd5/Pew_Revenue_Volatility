@@ -1,19 +1,36 @@
 
-# when starting work from a different computer
+https://git-scm.com/docs
+https://www.freecodecamp.org/news/10-important-git-commands-that-every-developer-should-know/
+https://confluence.atlassian.com/bitbucketserver/basic-git-commands-776639767.html
+https://happygitwithr.com/git-commands.html
+https://www.geos.ed.ac.uk/~smudd/NMDM_Course/html/more_advanced_github.html
 
-# - pull project from remote
+when starting work from a different computer:
+
+# pull project from remote
 
 # create new branch
-#   git checkout -b linux (or whatever)
+    git checkout -b linux (or whatever branch name is desired)
 
-# Stage local changes, commit, check status:
-#   git add prep_data.rmd (or whatever)
-#   git commit --message "A commit message"
-#   git status
+# stage local changes, commit, check status:
+   git add prep_data.rmd (or whatever) or
+   git add *  or maybe git add -A (for everything)
+   
+   git commit --message "A commit message"  or
+   git commit -m "A commit message"
+   
+   git status
 
 # now merge
-# git checkout master
-# git merge issue-5
+  git checkout main  (other people seem to use master but RStudio uses main)
+  git merge linux (or whatever the branch name is)
 
 # then push
-# git push
+  git push
+  
+  
+#----------------------------------------------------------------------------
+miscellaneous git commands
+
+  git merge --abort
+  
