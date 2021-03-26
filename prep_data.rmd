@@ -166,24 +166,6 @@ some comments
 
 
 ```{r git_workflow, eval=FALSE}
-# when starting work from a different computer
-
-# - pull project from remote
-
-# create new branch
-#   git checkout -b linux (or whatever)
-
-# Stage local changes, commit, check status:
-# git add prep_data.rmd (or whatever)
-# git commit --message "A commit message"
-# git status
-
-# now merge
-# git checkout master
-# git merge issue-5
-
-# then push
-# git push
 
 
 ```
