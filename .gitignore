@@ -11,6 +11,7 @@
 *.rds
 *.xl*
 ignore/
+data/
 libs/
 project_analysis/
 temp/
