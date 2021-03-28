@@ -29,8 +29,8 @@ editor_options:
 # -- NEVER using Knit with eval=TRUE
 # note <br> breaks line for html output but \n should break for pdf; also could try |
 
-rmdfn <- "./Pew_Tax_Revenue_Volatility.rmd" # this file
-outfn <- paste0("tax_volatility_", format(Sys.time(), "%Y-%m-%d"), ".html")
+rmdfn <- "./prep_data.rmd" # this file
+outfn <- paste0("prepdata_", format(Sys.time(), "%Y-%m-%d"), ".html")
 rmarkdown::render(rmdfn, output_format="html_document", output_file=outfn)
 
 # library("RCurl")
@@ -47,171 +47,9 @@ knitr::opts_chunk$set(echo = FALSE, include=FALSE, eval=FALSE, message = FALSE, 
 ```
 
 
-<!--
-# code folding ----
-#   alt-L, alt-shift-L  one section
-#   alt-O, alt-shift-O  all sections
-#   ctrl-D run current code section (remapped from Ctrl-alt-T)
-
-
-always_allow_html: yes
-
-  html_document:
-    toc: yes
-    toc_depth: '2'
-    df_print: paged
-    number_sections: yes
-
-
-
-# renv ----
-vignette("renv")
-documentation online at https://rstudio.github.io/renv
-
-The general workflow when working with renv is:
-
-1. Call renv::init() to initialize a new project-local environment with a private R library,
-
-2. Work in the project as normal, installing and removing new R packages as they are needed in the project,
-
-3. Call renv::snapshot() to save the state of the project library to the lockfile (called renv.lock),
-
-4. Continue working on your project, installing and updating R packages as needed.
-
-5. Call renv::snapshot() again to save the state of your project library if your attempts to update R packages were successful, or call renv::restore() to revert to the previous state as encoded in the lockfile if your attempts to update packages introduced some new problems.
-
--->
-
-```{r gitnotes}
-
-```
-
-<!-- git notes:
-https://happygitwithr.com/git-commands.html
-https://www.geos.ed.ac.uk/~smudd/NMDM_Course/html/more_advanced_github.html
-
-git clone https://github.com/USERNAME/REPOSITORY.git  # get a repository (probably mine)
-
-
-
-Add a remote to existing local repo:
-
-git remote add origin https://github.com/jennybc/happy-git-with-r
-git remote --verbose
-git remote show origin
-
-
-
-$ git fetch remotename
-# Fetches updates made to a remote repository
-
-$ git merge remotename/branchname
-# Merges updates made online with your local work
-
-git pull is a convenient shortcut for completing both git fetch and git merge in the same command:
-
-$ git pull remotename branchname
-# Grabs online updates and merges them with your local work
-
-
-git checkout -b issue-5  # create branch and checkout branch
-
-work on changes, then
-git commit --all -m "WIP"
-git checkout master
-
-Once you have done your work and committed it to the feature branch, you can switch back to master and merge the feature branch.
-
-git checkout master
-git merge issue-5
-
-
-etc. one last change
-
-git checkout master
-git pull origin master will bring your master branch up to date with the remote repository
-
-if you want to make develop be identical to master, the simplest way is just to recreate the pointer:
-
-git branch -f develop master
-e.g.
-git branch -f linbranch main
-
-Or, if you already have develop checked out:
-
-git reset --hard develop master
-
-some comments
-
--->
-
-
-
 ```{r renv_notes, eval=FALSE}
-# https://rstudio.github.io/renv/articles/renv.html
-
-# Custom R Package Repositories
-# Custom and local R package repositories are supported as well. The only requirement is that these repositories
-# are set as part of the repos R option, and that these repositories are named. For example, you might use:
-# 
-# repos <- c(CRAN = "https://cloud.r-project.org", WORK = "https://work.example.org")
-# options(repos = repos)
-# to tell renv to work with both the official CRAN package repository, as well as a package repository you have hosted and set up in your work environment.
-
-# install local packages
-# local_package_sources <- r"(C:\RPrograms PC\ProjectsCurrent\Pew_Revenue_Volatility\local\)"
-# repos <- c(CRAN = "https://cloud.r-project.org", LOCAL = local_package_sources)
-# options(repos = repos)
-
-# note that tarballs are at: C:\RPrograms PC\Packages\bdata_0.6.tar.gz
-# create tarballs of the desired packages and save them in the renv\local directory here, so that
-# they will be portable. users will then have to install them from the renv\local directory
-# steps below
-
-# 1) Define directories
-# pkgsource_dir is relevant for Boyd only - it is the location of source files for any packages I created
-# pkgsource_dir <- r"(C:\RPrograms PC\Packages\)"  # raw string
-# pkgdir is where "tarballs" of local packages will be placed -- this will be...
-# pkgdir <- r"(C:\RPrograms PC\ProjectsCurrent\Pew_Revenue_Volatility\renv\local\)"
-
-# 2) This step is for Boyd machine only:
-# uncomment code below and build and save my local packages tarballs in the renv local directory
-devtools::build(pkg = paste0(pkgsource_dir, "btools"),  # bdata BEAData btools
-                path = pkgdir,
-                binary = FALSE,
-                vignettes = FALSE,
-                manual = FALSE,
-                args = NULL,
-                quiet = FALSE)
-# do the above for any other needed local packages
-
-# 3) On Boyd machine and on user machine, install these packages from tarballs
-# you may have to define the pkgdir location on your machine
-# if the package is in use and you are updating it, then first: detach(package:bdata)
-# pkgs <- c("bdata_0.7.tar.gz", "BEAData_0.6.0.tar.gz", "btools_0.9.tar.gz")
-
-renv::install(paste0(pkgdir, "bdata_0.7.tar.gz"))
-renv::install(paste0(pkgdir, "BEAData_0.6.0.tar.gz"))
-renv::install(paste0(pkgdir, "btools_0.9.tar.gz"))
-renv::snapshot()
-
-
-# further notes
-# to get it all started:
-# renv::init()
-
-# to remove it all:
-# renv::deactivate()
-# then delete the renv folder
-
-# periodically execute:
+# periodically do:
 # renv::snapshot()
-
-# to see what directory is being used by renv for local package sources, execute:
-# renv:::renv_paths_local()
-
-# ${RENV_PATHS_LOCAL}/<package>_<version>.tar.gz
-
 ```
 
 

@@ -1,0 +1,15 @@
+# code folding ----
+#   alt-L, alt-shift-L  one section
+#   alt-O, alt-shift-O  all sections
+#   ctrl-D run current code section (remapped from Ctrl-alt-T)
+
+
+always_allow_html: yes
+
+  html_document:
+    toc: yes
+    toc_depth: '2'
+    df_print: paged
+    number_sections: yes
+
+

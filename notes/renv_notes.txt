@@ -1,0 +1,80 @@
+# renv ----
+vignette("renv")
+documentation online at https://rstudio.github.io/renv
+
+The general workflow when working with renv is:
+
+1. Call renv::init() to initialize a new project-local environment with a private R library,
+
+2. Work in the project as normal, installing and removing new R packages as they are needed in the project,
+
+3. Call renv::snapshot() to save the state of the project library to the lockfile (called renv.lock),
+
+4. Continue working on your project, installing and updating R packages as needed.
+
+5. Call renv::snapshot() again to save the state of your project library if your attempts to update R packages were successful, or call renv::restore() to revert to the previous state as encoded in the lockfile if your attempts to update packages introduced some new problems.
+
+
+
+# https://rstudio.github.io/renv/articles/renv.html
+
+# Custom R Package Repositories
+# Custom and local R package repositories are supported as well. The only requirement is that these repositories
+# are set as part of the repos R option, and that these repositories are named. For example, you might use:
+# 
+# repos <- c(CRAN = "https://cloud.r-project.org", WORK = "https://work.example.org")
+# options(repos = repos)
+# to tell renv to work with both the official CRAN package repository, as well as a package repository you have hosted and set up in your work environment.
+
+# install local packages
+# local_package_sources <- r"(C:\RPrograms PC\ProjectsCurrent\Pew_Revenue_Volatility\local\)"
+# repos <- c(CRAN = "https://cloud.r-project.org", LOCAL = local_package_sources)
+# options(repos = repos)
+
+# note that tarballs are at: C:\RPrograms PC\Packages\bdata_0.6.tar.gz
+# create tarballs of the desired packages and save them in the renv\local directory here, so that
+# they will be portable. users will then have to install them from the renv\local directory
+# steps below
+
+# 1) Define directories
+# pkgsource_dir is relevant for Boyd only - it is the location of source files for any packages I created
+# pkgsource_dir <- r"(C:\RPrograms PC\Packages\)"  # raw string
+# pkgdir is where "tarballs" of local packages will be placed -- this will be...
+# pkgdir <- r"(C:\RPrograms PC\ProjectsCurrent\Pew_Revenue_Volatility\renv\local\)"
+
+# 2) This step is for Boyd machine only:
+# uncomment code below and build and save my local packages tarballs in the renv local directory
+devtools::build(pkg = paste0(pkgsource_dir, "btools"),  # bdata BEAData btools
+                path = pkgdir,
+                binary = FALSE,
+                vignettes = FALSE,
+                manual = FALSE,
+                args = NULL,
+                quiet = FALSE)
+# do the above for any other needed local packages
+
+# 3) On Boyd machine and on user machine, install these packages from tarballs
+# you may have to define the pkgdir location on your machine
+# if the package is in use and you are updating it, then first: detach(package:bdata)
+# pkgs <- c("bdata_0.7.tar.gz", "BEAData_0.6.0.tar.gz", "btools_0.9.tar.gz")
+
+renv::install(paste0(pkgdir, "bdata_0.7.tar.gz"))
+renv::install(paste0(pkgdir, "BEAData_0.6.0.tar.gz"))
+renv::install(paste0(pkgdir, "btools_0.9.tar.gz"))
+renv::snapshot()
+
+# to get it all started:
+# renv::init()
+
+# to remove it all:
+# renv::deactivate()
+# then delete the renv folder
+
+# periodically execute:
+# renv::snapshot()
+
+# to see what directory is being used by renv for local package sources, execute:
+# renv:::renv_paths_local()
+
+# ${RENV_PATHS_LOCAL}/<package>_<version>.tar.gz
+

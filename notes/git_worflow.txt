@@ -57,4 +57,16 @@ git push -u origin master  # shorter form
 2. miscellaneous git commands
 
   git merge --abort
+
+
+# bringing master up to date with remote  
+git checkout master
+git pull origin master will bring your master branch up to date with the remote repository
+
+# bringing develop branch up to date with the master -- simplest way is just to recreate the pointer:
+  git branch -f develop master
+
+Or, if you already have develop checked out:
+  git reset --hard develop master
+  
   
