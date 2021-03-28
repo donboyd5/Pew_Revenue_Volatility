@@ -15,13 +15,11 @@ editor_options:
   chunk_output_type: console
 ---
 
-
 <!-- <style> -->
 <!-- body .main-container { -->
 <!--   max-width: 1500px; -->
 <!-- } -->
 <!-- </style> -->
-
 
 
 ```{r runall, eval=FALSE, echo=FALSE} 
@@ -36,12 +34,10 @@ rmarkdown::render(rmdfn, output_format="html_document", output_file=outfn)
 # library("RCurl")
 # ftpUpload(outfn, "ftp://kffrig:boyd4812@files.000webhost.com/public_html/KFF_RIG_MedicaidCuts_new.html")
 
-# Note may b safest to fully exit RStudio and restart it before running whole thing. Otherwise knitr may get confused
+# Note may be safest to fully exit RStudio and restart it before running whole thing. Otherwise knitr may get confused
 # and include repetitive information in the output html file.
 
 ```
-
-
 
 
 ```{r setup, include=FALSE, eval=TRUE}
@@ -60,15 +56,13 @@ knitr::opts_chunk$set(echo = FALSE, include=FALSE, eval=FALSE, message = FALSE, 
 ```
 
 
-
-<!-- comments -->
-
 <!--
+Workflow notes
+
 # code folding ----
 #   alt-L, alt-shift-L  one section
 #   alt-O, alt-shift-O  all sections
 #   ctrl-D run current code section (remapped from Ctrl-alt-T)
-
 
 always_allow_html: yes
 
@@ -78,109 +72,7 @@ always_allow_html: yes
     df_print: paged
     number_sections: yes
 
-
-
-# renv ----
-vignette("renv")
-documentation online at https://rstudio.github.io/renv
-
-The general workflow when working with renv is:
-
-1. Call renv::init() to initialize a new project-local environment with a private R library,
-
-2. Work in the project as normal, installing and removing new R packages as they are needed in the project,
-
-3. Call renv::snapshot() to save the state of the project library to the lockfile (called renv.lock),
-
-4. Continue working on your project, installing and updating R packages as needed.
-
-5. Call renv::snapshot() again to save the state of your project library if your attempts to update R packages were successful, or call renv::restore() to revert to the previous state as encoded in the lockfile if your attempts to update packages introduced some new problems.
-
-
--->
-
-```{r gitnotes}
-
-```
-
-<!-- git notes:
-https://happygitwithr.com/git-commands.html
-https://www.geos.ed.ac.uk/~smudd/NMDM_Course/html/more_advanced_github.html
-
-
-git clone https://github.com/USERNAME/REPOSITORY.git  # get a repository (probably mine)
-
-Check the remote was cloned successfully:
-git remote --verbose
-
-Stage local changes, commit:
-git add foo.txt
-git commit --message "A commit message"
-
-Check on the state of the Git world:
-git status
-git log
-git log --oneline
-
-Compare versions:
-
-git diff
-
-Add a remote to existing local repo:
-
-git remote add origin https://github.com/jennybc/happy-git-with-r
-git remote --verbose
-git remote show origin
-
-Push local master to GitHub master and have local master track master on GitHub:
-
-git push --set-upstream origin master
-## shorter form
-git push -u origin master
-## you only need to set upstream tracking once!
-
-$ git fetch remotename
-# Fetches updates made to a remote repository
-
-$ git merge remotename/branchname
-# Merges updates made online with your local work
-
-git pull is a convenient shortcut for completing both git fetch and git merge in the same command:
-
-$ git pull remotename branchname
-# Grabs online updates and merges them with your local work
-
-
-
-git checkout -b issue-5  # create branch and checkout branch
-
-work on changes, then
-git commit --all -m "WIP"
-git checkout master
-
-Once you have done your work and committed it to the feature branch, you can switch back to master and merge the feature branch.
-
-git checkout master
-git merge issue-5
-
-
-etc. one last change
-
-git checkout master
-git pull origin master will bring your master branch up to date with the remote repository
-
-if you want to make develop be identical to master, the simplest way is just to recreate the pointer:
-
-git branch -f develop master
-e.g.
-git branch -f linbranch main
-
-Or, if you already have develop checked out:
-
-git reset --hard develop master
-
-some comments
-
+renv::snapshot() to save the state of the project library to the lockfile (renv.lock),
 -->
 
 
@@ -200,80 +92,12 @@ some comments
 # then push
 # git push
 
-
-```
-
-
-
-```{r renv_notes, eval=FALSE}
-# https://rstudio.github.io/renv/articles/renv.html
-
-# Custom R Package Repositories
-# Custom and local R package repositories are supported as well. The only requirement is that these repositories
-# are set as part of the repos R option, and that these repositories are named. For example, you might use:
-# 
-# repos <- c(CRAN = "https://cloud.r-project.org", WORK = "https://work.example.org")
-# options(repos = repos)
-# to tell renv to work with both the official CRAN package repository, as well as a package repository you have hosted and set up in your work environment.
-
-# install local packages
-# local_package_sources <- r"(C:\RPrograms PC\ProjectsCurrent\Pew_Revenue_Volatility\local\)"
-# repos <- c(CRAN = "https://cloud.r-project.org", LOCAL = local_package_sources)
-# options(repos = repos)
-
-# note that tarballs are at: C:\RPrograms PC\Packages\bdata_0.6.tar.gz
-# create tarballs of the desired packages and save them in the renv\local directory here, so that
-# they will be portable. users will then have to install them from the renv\local directory
-# steps below
-
-# 1) Define directories
-# pkgsource_dir is relevant for Boyd only - it is the location of source files for any packages I created
-# pkgsource_dir <- r"(C:\RPrograms PC\Packages\)"  # raw string
-# pkgdir is where "tarballs" of local packages will be placed -- this will be...
-# pkgdir <- r"(C:\RPrograms PC\ProjectsCurrent\Pew_Revenue_Volatility\renv\local\)"
-
-# 2) This step is for Boyd machine only:
-# uncomment code below and build and save my local packages tarballs in the renv local directory
-devtools::build(pkg = paste0(pkgsource_dir, "btools"),  # bdata BEAData btools
-                path = pkgdir,
-                binary = FALSE,
-                vignettes = FALSE,
-                manual = FALSE,
-                args = NULL,
-                quiet = FALSE)
-# do the above for any other needed local packages
-
-# 3) On Boyd machine and on user machine, install these packages from tarballs
-# you may have to define the pkgdir location on your machine
-# if the package is in use and you are updating it, then first: detach(package:bdata)
-# pkgs <- c("bdata_0.7.tar.gz", "BEAData_0.6.0.tar.gz", "btools_0.9.tar.gz")
-
-renv::install(paste0(pkgdir, "bdata_0.7.tar.gz"))
-renv::install(paste0(pkgdir, "BEAData_0.6.0.tar.gz"))
-renv::install(paste0(pkgdir, "btools_0.9.tar.gz"))
-renv::snapshot()
-
-
-# further notes
-# to get it all started:
-# renv::init()
-
-# to remove it all:
-# renv::deactivate()
-# then delete the renv folder
-
-# periodically execute:
-# renv::snapshot()
-
-# to see what directory is being used by renv for local package sources, execute:
-# renv:::renv_paths_local()
-
-# ${RENV_PATHS_LOCAL}/<package>_<version>.tar.gz
-
 ```
 
 
 ```{r get_libs_and_functions, include=FALSE, eval=TRUE}
+# clear objects from the workspace
+rm(list=ls(all=TRUE))
 source(here::here("r", "libs_base.r"))
 source(here::here("r", "libs_ts.r"))
 source(here::here("r", "functions.r"))
@@ -282,6 +106,168 @@ devtools::session_info()
 
 ```
 
+
+# Materials for report, organized by topic
+
+## Get previously created data
+```{r get_data}
+source(here::here("r", "functions.r"))
+load(file = here::here("data", "general.RData"), verbose=TRUE)
+load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
+load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
+
+```
+
+
+```{r measures}
+
+```
+
+
+```{r functions}
+hp_df <- function(df, vname, smooth=NULL){
+  vts <- ts(df[vname])
+  vts_hp <- hpfilter(vts, freq=smooth, type=c("lambda"), drift=FALSE)
+  df %>% 
+    mutate(trend=as.numeric(vts_hp$trend),
+           cycle=as.numeric(vts_hp$cycle))
+}
+
+hptrend <- function(vec, smooth=NULL){
+  vts_hp <- hpfilter(ts(vec), freq=smooth, type=c("lambda"), drift=FALSE)
+  as.numeric(vts_hp$trend)
+}
+
+```
+
+
+
+# Construct Seegert volatility measure
+```{r}
+df <- taxkeep %>%
+  filter(stabbr=="US", name=="tottax", year >= 1959) %>%
+  select(year, tax=value) %>%
+  left_join(gdpfy, by="year") %>% # nominal gdp
+  arrange(year)
+
+df2 <- df %>%
+  pivot_longer(-year) %>%
+  group_by(name) %>%
+  arrange(year) %>%
+  mutate(trend=hptrend(value, smooth=100),
+         vol1=log(abs(value - trend)),
+         vol2=(value - trend) / trend * 100)
+
+df2 %>%
+  filter(year >= 1970) %>%
+  ggplot(aes(year, vol2, colour=name)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(name=NULL) +
+  scale_y_continuous(name="volatility (% difference from smoothed trend)",
+                     breaks=seq(-20, 20, 2)) +
+  ggtitle("Volatility of State Government Tax Revenue and Gross Domestic Product, United States",
+          subtitle="Volatility measured as % difference from smoothed trend (HP filter)") +
+  theme_bw()
+
+# Colorado-type approach
+df2 <- df %>%
+  mutate(return=tax / lag(tax),
+         dreturn=log(return)*100)
+
+df2 %>%
+  filter(year >= 1970) %>%
+  ggplot(aes(year, vol)) +
+  geom_line() +
+  geom_point()
+
+```
+
+
+## Introduction and motivation
+
+### Setting the scene - year over year % change
+```{r pchplot, fig.height=4.5, fig.width=8, eval=TRUE, include=TRUE}
+# sd10c
+#  pchplot, fig.height=4.5, fig.width=8, eval=FALSE}
+# summary(sgtax.a)
+irecs <- which(recessions$rec_year >= 1960)
+
+p2 <- taxgdpus %>%
+  filter(year >= 1960) %>%
+  ggplot(aes(year, vpch, colour=name)) +
+  geom_line(size=1) +
+  geom_point(size=1.15) +
+  scale_y_continuous(name="% change", breaks=seq(-20, 20, 2)) +
+  scale_x_continuous(name=NULL, breaks=seq(1960, 2030, 5)) +
+  scale_colour_manual(values=c("red", "blue")) +
+  geom_hline(yintercept = 0) +
+  annotate("rect",
+           xmin = recessions$peak[irecs] %>% decimal_date(),
+           xmax = recessions$trough[irecs] %>% decimal_date(),
+           fill = "lightgrey",
+           alpha = .5, # larger alpha is darker rectangle
+           ymin = -Inf, ymax = Inf) +
+  ggtitle("Year over year growth in state government tax revenue and GDP for the United States",
+          subtitle="Recession periods are shaded.") +
+  labs(caption="Source: U.S. Bureau of the Census and Bureau of Economic Analysis") +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust=0, size=9)) +
+  theme(legend.title = element_blank())
+p2
+ggsave(filename = here::here("results", "tax_gdp_us.png"), plot = p2)
+
+
+```
+
+
+## Ways to measure tax revenue volatility
+
+* Past research
+  + Rolling variance (Dauchy 2013)
+  + Deviation from trend
+    + Kwak 2013 says White 1983; Dye and McGuire 1991; Braun and Otsuka 1998; Aisen and Jose´ Veiga 2008 all used deviation from trend
+    + Orthogonal Distance Regression (Kwak 2013)
+     
+
+### Selected measures for the United States
+
+
+
+
+#### Rolling standard deviation
+
+
+#### Deviation from trend
+
+
+## Recent trends in revenue volatility
+
+
+## Drivers of state revenue volatility
+
+### The nature of national economic changes
+
+### State economic structure
+
+### State tax structure
+
+#### The portfolio of state taxes
+
+#### The structure of individual taxes
+
+
+##	Implications for states in current recession and beyond
+
+### Special characteristics of the Covid-19 recession and state tax volatility
+
+### How much can states reduce volatility with alternative tax structures?
+
+
+
+
+# APPENDICES BELOW HERE
 
 
 # Project management and organization
@@ -459,386 +445,6 @@ All have implications for states in current recession and beyond.
 
 
 
-
-
-# Data preparation and checking
-
-Certain chunk names in this section start with "ONETIME". In those chucks, I create and save data that will be later read from files. The data only need to be created one time (or updated and re-saved if I decide to update the data).
-
-## Create data frame indicating the start of each state's fiscal year
-
-So that we can adjusting certain data to correspond to state fiscal years.
-
-*   46 states have a July 1 fiscal year
-*   NY has April 1
-*   TX has Sept 1
-*   AL, MI have Oct 1
-*   For example, see [this](https://www.ncsl.org/research/fiscal-policy/fy-2021-state-budget-status.aspx)
-
-
-```{r state_fiscal_years}
-# state fiscal year starts  https://www.ncsl.org/research/fiscal-policy/fy-2021-state-budget-status.aspx
-# NY April, TX Sept, AL & MI Oct, 46 states July
-sfy_startmonths <- tibble(stabbr=state.abb) %>%
-  mutate(startmonth=case_when(stabbr=="NY" ~ 4,
-                              stabbr=="TX" ~ 9,
-                              stabbr %in% c("AL", "MI") ~ 10,
-                              TRUE ~ 7))
-
-# saveRDS(sfy_startmonths, here::here("data", "sfy_startmonths.rds"))
-
-```
-
-```{r save_general}
-save(sfy_startmonths, file = here::here("data", "general.RData"))
-
-```
-
-
-## NIPA national data
-
-*   I have a package called `BEAData` that includes virtually all major data from the Bureau of Economic Analysis (BEA) in relation to the National Income and Products Accounts (NIPA) and in relation to regional data.
-*   For details on data creation see the [github site](https://github.com/donboyd5/BEAData).
-*   The package is stored locally in the renv/local folder and can be installed from there.
-*   `data(package="BEAData")` shows the files available
-*   NIPA national data are in dataframe `nipa`
-*   `comment(nipa)` shows creation date
-
-In this section I create data frames with national GDP (nominal) and the GDP price index, on a state fiscal year basis.
-
-
-```{r nipa_national}
-glimpse(nipa)
-nipa %>%
-  filter(freq=="Q", str_detect(vdesc, "Gross domestic product, Current")) %>%
-  group_by(vname, vdesc) %>%
-  filter(date==max(date))
-# A191RC US nominal gdp
-# "A191RG" US GDP price index
-
-gdpfy <- nipa %>%
-  filter(vname=="A191RC", freq=="Q") %>%
-  # fix NY AL MI TX
-  mutate(fyear=ifelse(month(date) >= 7, year + 1, year) %>% as.integer) %>%
-  group_by(vname, fyear) %>%
-  summarise(gdp=mean(value, na.rm=TRUE), .groups="drop") %>%
-  filter(fyear < 2020) %>%
-  select(year=fyear, gdp)
-gdpfy %>% ht  # 1947, 2019
-
- 
-baseyear <- 2019
-gdppi <- nipa %>%
-  filter(vname=="A191RG", freq=="Q") %>%
-  # fix NY AL MI TX
-  mutate(fyear=ifelse(month(date) >= 7, year + 1, year) %>% as.integer) %>%
-  group_by(vname, fyear) %>%
-  summarise(gdppi=mean(value, na.rm=TRUE), .groups="drop") %>%
-  filter(fyear < 2020) %>%
-  select(year=fyear, gdppi) %>%
-  mutate(igdppi=gdppi[year==baseyear] / gdppi) 
-
-recessions # 1857, ..., 2020
-
-```
-
-
-```{r nipa_national_data_for_recessions}
-# https://apps.bea.gov/iTable/iTable.cfm
-# we want two kinds of breakdowns:
-#    C + I + G + (X - M)
-#    Industrial breakdown
-
-#.. CIGXM ----
-# Table 1.1.6. Real Gross Domestic Product, Chained Dollars
-tab <- NIPAvars %>%
-  filter(tabnum == "1.1.6") %>%
-  arrange(line)
-
-cigxm_vars <- tab %>%
-  filter(line %in% c(1:6, 7, 8, 14, 15, 15, 22))
-cigxm_vars
-
-cigxm <- nipa %>%
-  right_join(cigxm_vars %>% 
-               select(vname), 
-             by = "vname")
-
-
-#.. Industrial breakdown ----
-# A150RX
-NIPAvars %>%
-  filter(vname == "A150RX") 
-
-tmp <- NIPAvars %>%
-  filter(str_detect(vdesc, coll("manuf", ignore_case = TRUE))) 
- 
-mtables <- count(tmp, tabname)
-# https://apps.bea.gov/industry/Release/XLS/GDPxInd/ValueAdded.xlsx
-# https://apps.bea.gov//industry/iTables%20Static%20Files/AllTablesHist.zip
-
-
-
-# Table 5.8.6B. Real Private Inventories and Real Domestic Final Sales by Industry, Chained Dollars
-# Table 6.16D. Corporate Profits by Industry
-# Table 6.5D. Full-Time Equivalent Employees by Industry
-
-#..Employment breakdown ----
-# https://www.bls.gov/web/empsit/cesseriespub.htm
-# https://download.bls.gov/pub/time.series/ce/ce.data.01a.CurrentSeasAE  
-# https://download.bls.gov/pub/time.series/ce/ce.txt says:
-# ce.data.01a.CurrentSeasAE - contains every seasonally adjusted all employee series and its complete history.    
-
-#..Causes and characteristics ----
-# https://www.investopedia.com/articles/economics/08/past-recessions.asp
-# inflation: 1969
-# oil and energy crises: 1973, 1980, 1981
-# war: 1990 (Gulf)
-# 9/11:  2001
-# financial crisis: 2007 Great Recession
-# real estate: 2007 GR
-# 
-#
-# variables:
-# oil prices
-# real estate prices
-# stock market
-# manufacturing, tourism, other sectors
-# unemployment rate
-
-```
-    
-    
-```{r save_econ_national}
-save(gdpfy, gdppi, recessions, file = here::here("data", "econ_national.RData"))
-
-```
-    
-    
-## Census Bureau tax data
-
-### Clean tax data
-
-Steps:
-
-1.    Get Census state govt tax data from bdata (previously created)
-2.    Keep desired taxes and create an other taxes category
-3.    Identify and explore anomalies
-
-```{r get_tax}
-# tax1 has untouched data from Census, only the items we want, long format
-# tax2 is same, but with the other tax variable
-
-
-glimpse(sgtax.a)  # 2019 end year; most values from ~1951+
-# count(sgtax.a, year) %>% as.data.frame()
-# count(sgtax.a, item, desc)
-
-# determine the tax items we want
-taxnames <- sgtax.a %>% select(item, desc) %>% distinct()
-items <- c("C105", "T09", "C109", "T40", "T41", "T53")
-varnames <- c("tottax", "gst", "selsalestax", "iit", "cit", "sevtax")
-sumvars <- setdiff(varnames, "tottax")
-
-
-tax1 <- sgtax.a %>%
-  filter(year >= 1951) %>%
-  filter(item %in% items) %>%
-  mutate(name=factor(item, levels=items, labels=varnames)) %>%
-  select(stabbr, name, year, value) %>%
-  arrange(stabbr, name, year)
-summary(tax1)  # no missing values
-
-# tax2 calculates other tax
-tax2 <- tax1 %>%
-  # now calculate other tax
-  pivot_wider(names_from = name) %>%
-  mutate(nonother = rowSums(across(all_of(sumvars)), na.rm=TRUE),
-         othertax=tottax - nonother) %>%
-  select(-nonother) %>%
-  pivot_longer(-c(year, stabbr)) %>%
-  filter(!is.na(value))  # we can safely drop NA values because we didn't have any in tax1
-summary(tax2)
-
-```
-
-Identify and explore anomalies:
-
-+   missing
-+   zero
-+   missing or zero at start (always assumed bad)
-+   missing or zero at end (always assumed bad)
-+   missing in middle
-+   zero in middle
-+   negative in middle (logs won't work -- only 1 found)
-+   short runs (fewer than X positive values in a row)
-
-
-```{r anomalies}
-# identify different anomalies
-# CO sevtax  2017 0
-# OH cit 2014 -118 
-tax2 %>% filter(stabbr=="AK", name=="iit")
-tax2 %>% filter(stabbr=="AK", name=="gst")
-tax2 %>% filter(stabbr=="AZ", name=="sevtax")
-tax2 %>% filter(stabbr=="CO", name=="sevtax")
-tax2 %>% filter(stabbr=="OH", name=="cit")
-tax2 %>% filter(stabbr=="NH", name=="sevtax")
-tax2 %>% filter(stabbr=="SD", name=="sevtax")
-
-# vectors used to test the functions below
-a1 <- c(0, 0, NA, 1, 2, 3, 0, 4, 5, 6, 0, 0)
-a2 <- c(0, 0, 0, 0)
-a3 <- c(0, NA, 0, 0)
-a4 <- c(7, 9, 0, 0, NA, 1, 2, 3, 0, 4, 5, 6)
-
-firstnz <- function(x) {
-  # find index of first nonzero value, to help us identify zeroes at the start
-  ifelse(all(x==0, na.rm=TRUE), 
-         Inf, 
-         which(x != 0)[[1]])
-}
-
-# test firstnz
-firstnz(a1)
-firstnz(a2)
-firstnz(a3)
-firstnz(a4)
-
-lastnz <- function(x) {
-  # find index of last nonzero value, to help us identify zeroes at the end
-  ifelse(all(x==0, na.rm=TRUE),
-         -Inf, 
-         tail(which(x != 0), 1))
-}
-
-# test lastnz
-lastnz(a1)
-lastnz(a2)
-lastnz(a3)
-lastnz(a4)
-
-
-firstgap <- function(gap) {
-  # gap is a a vector of 0 or 1 indicators for a series
-  # 0 indicates the observation is not part of a gap and 1 indicates it is part of a gap
-  # firstgap finds the index at which a gap in a series starts (if a gap exists)
-  ifelse(all(gap !=TRUE, na.rm=TRUE),
-         Inf, # return Inf if there is no gap in the series
-         which(gap==TRUE)[[1]]) # index of the start of the first gap
-}
-
-
-lastgap <- function(gap) {
-  # index of the final observation in last gap
-  ifelse(all(gap !=TRUE, na.rm=TRUE),
-         -Inf, # return -Inf if there is no gap in the series
-         tail(which(gap==TRUE), 1)) # index of the final observation in the last gap of a series
-}
-
-
-# identify anomalies within each state-tax combination
-# also, for series that have gaps in them, identify observations that occur before the first gap or
-# after the last gap, as we will only want to keep one or the other
-anomalies <- tax2 %>%
-  group_by(stabbr, name) %>%
-  mutate(missval = is.na(value),  # we should not have any missing values but check anyway
-         zeroval = value == 0,
-         negval = value < 0,
-         leadzero = row_number() < firstnz(value),   # identify all leading-zero rows
-         trailzero = row_number() > lastnz(value),  # identify all trailing-zero rows
-         gap = zeroval & !(leadzero | trailzero),  # a gap occurs if we have a zero that is not leading or trailing
-         pregap = row_number() < firstgap(gap),   # identify data that occurs before the first gap
-         postgap = row_number() > lastgap(gap))   # identify data that occurs after the last gap
-summary(anomalies)
-# what should we do if a series has multiple gaps?? look to make sure it doesn't happen; I don't think so
-
-anomalies %>% filter(stabbr=="AK", name=="iit")
-anomalies %>% filter(stabbr=="AK", name=="gst")
-anomalies %>% filter(stabbr=="AZ", name=="sevtax")
-anomalies %>% filter(stabbr=="AZ", name=="cit") # gap in 1957
-anomalies %>% filter(stabbr=="CO", name=="sevtax")
-anomalies %>% filter(stabbr=="OH", name=="cit")
-anomalies %>% filter(stabbr=="NH", name=="sevtax")
-anomalies %>% filter(stabbr=="NV", name=="sevtax")
-anomalies %>% filter(stabbr=="SD", name=="sevtax")
-anomalies %>% filter(gap)
-
-
-anomalies %>% 
-  filter(stabbr=="NV", name=="sevtax") %>%
-  lastgap()
-# note that NV sevtax jumped way up after 1987 -- investigate
-
-# rules:
-# - drop all lead zero and trail zero
-# - take the post gap periods
-# individually and decide - take the post gap
-
-# get rid of leading and trailing zeros
-anomalies_v2 <- anomalies %>%
-  filter(!(leadzero | trailzero))
-
-```
-
-
-```{r anomalies_gaps}
-# explore the gaps -- the only bad items -- and decide what to keep
-summary(anomalies_v2)
-
-# what gaps do we have?
-gaps <- anomalies_v2 %>%
-  group_by(stabbr, name) %>%
-  filter(any(gap != 0)) %>%
-  ungroup
-
-count(gaps, stabbr, name) # only 7 combinations
-
-gaps %>%
-  group_by(stabbr, name) %>%
-  summarise(gap_start=min(year[gap==TRUE]))
-
-anomalies_v2 %>% filter(stabbr=="AZ", name=="cit")
-anomalies_v2 %>% filter(stabbr=="CO", name=="sevtax")  # 2017 is zero; some big changes in early years
-anomalies_v2 %>% filter(stabbr=="MO", name=="sevtax")  # a string of zeroes before 1978
-anomalies_v2 %>% filter(stabbr=="NH", name=="sevtax") # we'll want to drop this for other reasons
-anomalies_v2 %>% filter(stabbr=="NM", name=="cit")  # 1967+ is good
-anomalies_v2 %>% filter(stabbr=="NV", name=="sevtax") # 1988+ is good - low values or zero prior
-anomalies_v2 %>% filter(stabbr=="SD", name=="sevtax") # 1976+ is good
-
-# there are only 7 so identify them by hand
-gapkeep <- tribble(~stabbr, ~name, ~year1, ~year2,
-                   "AZ", "cit", 1958, 2019,
-                   "CO", "sevtax", 1951, 2016,
-                   "MO", "sevtax", 1978, 2019,
-                   "NH", "sevtax", 1951, 1987,
-                   "NM", "cit", 1967, 2019,
-                   "NV", "sevtax", 1988, 2019,
-                   "SD", "sevtax", 1976, 2019,
-                   ) 
-gapkeep
-
-anomalies_v3 <- anomalies_v2 %>%
-  left_join(gapkeep, by=c("stabbr", "name")) %>%
-  mutate(drop=ifelse(!is.na(year1) & {(year < year1) | (year > year2)},
-                     TRUE, FALSE)) %>%
-  filter(!drop)
-anomalies_v3 %>% filter(stabbr=="SD", name=="sevtax") 
-
-taxkeep <- anomalies_v3 %>%
-  select(stabbr, name, year, value) %>%
-  ungroup
-summary(taxkeep)
-glimpse(taxkeep)
-# saveRDS(taxkeep, here::here("data", "taxkeep.rds"))
-
-```
-
-
-```{r save_taxdata}
-save(taxkeep, file=here::here("data", "taxdata.RData"))
-
-```
 
 
 
@@ -1156,107 +762,6 @@ hpall %>%
 ```
 
 
-
-# Materials for report, organized by topic
-
-## Get previously created data
-```{r get_data}
-# clear objects from the workspace
-rm(list=ls(all=TRUE))
-
-# now load just what we want
-source(here::here("r", "functions.r"))
-load(file = here::here("data", "general.RData"), verbose=TRUE)
-load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
-load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
-
-```
-
-
-```{r measures}
-
-```
-
-
-
-## Introduction and motivation
-
-### Setting the scene - year over year % change
-```{r pchplot, fig.height=4.5, fig.width=8, eval=TRUE, include=TRUE}
-# sd10c
-#  pchplot, fig.height=4.5, fig.width=8, eval=FALSE}
-# summary(sgtax.a)
-irecs <- which(recessions$rec_year >= 1960)
-
-p2 <- taxgdpus %>%
-  filter(year >= 1960) %>%
-  ggplot(aes(year, vpch, colour=name)) +
-  geom_line(size=1) +
-  geom_point(size=1.15) +
-  scale_y_continuous(name="% change", breaks=seq(-20, 20, 2)) +
-  scale_x_continuous(name=NULL, breaks=seq(1960, 2030, 5)) +
-  scale_colour_manual(values=c("red", "blue")) +
-  geom_hline(yintercept = 0) +
-  annotate("rect",
-           xmin = recessions$peak[irecs] %>% decimal_date(),
-           xmax = recessions$trough[irecs] %>% decimal_date(),
-           fill = "lightgrey",
-           alpha = .5, # larger alpha is darker rectangle
-           ymin = -Inf, ymax = Inf) +
-  ggtitle("Year over year growth in state government tax revenue and GDP for the United States",
-          subtitle="Recession periods are shaded.") +
-  labs(caption="Source: U.S. Bureau of the Census and Bureau of Economic Analysis") +
-  theme_bw() +
-  theme(plot.caption = element_text(hjust=0, size=9)) +
-  theme(legend.title = element_blank())
-p2
-ggsave(filename = here::here("results", "tax_gdp_us.png"), plot = p2)
-
-
-```
-
-
-## Ways to measure tax revenue volatility
-
-* Past research
-  + Rolling variance (Dauchy 2013)
-  + Deviation from trend
-    + Kwak 2013 says White 1983; Dye and McGuire 1991; Braun and Otsuka 1998; Aisen and Jose´ Veiga 2008 all used deviation from trend
-    + Orthogonal Distance Regression (Kwak 2013)
-     
-
-### Selected measures for the United States
-
-
-
-
-#### Rolling standard deviation
-
-
-#### Deviation from trend
-
-
-## Recent trends in revenue volatility
-
-
-## Drivers of state revenue volatility
-
-### The nature of national economic changes
-
-### State economic structure
-
-### State tax structure
-
-#### The portfolio of state taxes
-
-#### The structure of individual taxes
-
-
-##	Implications for states in current recession and beyond
-
-### Special characteristics of the Covid-19 recession and state tax volatility
-
-### How much can states reduce volatility with alternative tax structures?
 
 
 # Appendix
