@@ -1,6 +1,8 @@
+
+# libraries ----
 library(fredr)
 
-# API keys
+# API keys ----
 bea_apikey <- "21F782AD-56A6-439D-B3D5-9A592F020E26"
 bls_apikey <- "e1a32c87a90f4d889f5342174e275470"
 brbls_apikey <- "2ec4ce7e7f5b4934a8477539715adbae"
@@ -11,7 +13,33 @@ fredr_set_key(fred_apikey)
 # 1963-2013
 # change 2017 2013
 
-fpoly <- function(value, time, degree) lm(value ~ poly(time, degree))$fitted.values
+# functions ----
+fpoly <- function(value, degree) {
+  time <- 1:length(value)
+  lm(value ~ poly(time, degree))$fitted.values
+}
+
+fpoly2 <- function(value, degree) {
+  time <- 1:length(value)
+  lm(value ~ poly(time, degree))$residuals
+}
+
+hptrend <- function(vec, smooth=NULL){
+  vts_hp <- hpfilter(ts(vec), freq=smooth, type=c("lambda"), drift=FALSE)
+  as.numeric(vts_hp$trend)
+}
+
+fpoly2 <- function(value) {
+  time <- 1:length(value)
+  lm(value ~ time + I(time^2) + I(time^3) + I(time^4) + I(time^5))$fitted.values
+}
+
+
+time(1:10)
+time(20:30)
+time(c(10.12, 20, 30.45, 900.6))
+
+# analysis ----
 
 df <- taxkeep %>%
   filter(stabbr=="US", name=="tottax", year >= 1970) %>%
@@ -209,7 +237,7 @@ df %>%
   ggplot(aes(year, value, colour=name)) +
   geom_line()
 
-# try to understand his Fig A.1
+# Fig A.1 can I reproduce?? ----
 a1 <- taxkeep %>%
   filter(stabbr=="US", year %in% 1970:2014, name %in% c("tottax", "iit", "gst", "cit")) %>%
   pivot_wider() %>%
@@ -218,7 +246,6 @@ a1 <- taxkeep %>%
 a1 %>% filter(name=="tottax", year %in% c(1970, 1980, 1990, 2000, 2010))
 
 # FRED https://fred.stlouisfed.org/series/USTOTLTAX
-library(fredr)
 # USTOTLTAX USINCTAX USCORPINCTX USSALESTAX
 vars <- c("USTOTLTAX", "USINCTAX", "USCORPINCTX", "USSALESTAX")
 vnames <- c("tottax", "iit", "cit", "gst")
@@ -302,7 +329,113 @@ check %>%
   geom_line() +
   geom_point()
 
+#.. could it be that he used national averages not sums?? ----
+a1a <- taxkeep %>%
+  filter(stabbr!="US", year %in% 1970:2014, name %in% c("tottax", "iit", "gst", "cit")) %>%
+  pivot_wider() %>%
+  mutate(big3=rowSums(across(c(iit, gst, cit)), na.rm=TRUE)) %>%
+  select(stabbr, year, big3) %>%
+  group_by(stabbr) %>%
+  arrange(year) %>%
+  mutate(pch=big3 / big3[match(year - 1, year)] * 100 - 100) %>%
+  group_by(year) %>%
+  summarise(pch=mean(pch))
+a1a
 
+# figure 1 ----
+fig1 <- taxkeep %>%
+  filter(stabbr=="US", year %in% 1970:2014) %>%
+  pivot_wider() %>%
+  mutate(big3=iit + gst + cit) %>%
+  select(year, big3) %>%
+  left_join(gdpfy, by="year") %>%
+  pivot_longer(-year) %>%
+  group_by(name) %>%
+  arrange(year) %>%
+  mutate(ptrend=fpoly(value, 5),
+         htrend=hptrend(value, smooth=100),
+         trend=ptrend,
+         detrend=(value - trend) /  value * 100)
+
+fig1 %>%
+  filter(year %in% 1970:2014) %>%
+  ggplot(aes(year, detrend, colour=name)) +
+  geom_line() +
+  geom_point() +
+  theme_bw() +
+  geom_hline(yintercept = 0)
+
+var <- "gdp"  # gdp big3
+fig1 %>%
+  filter(name==var) %>%
+  mutate(pch=value / lag(value) * 100 - 100)
+
+fig1 %>%
+  filter(name==var) %>%
+  ungroup %>%
+  select(year, value, trend) %>%
+  pivot_longer(-year, names_to = "measure") %>%
+  ggplot(aes(year, value, colour=measure)) +
+  geom_line() +
+  geom_point() +
+  ggtitle(var)
+
+taxcomp <- taxkeep %>%
+  filter(stabbr=="US", year %in% 1970:2014) %>%
+  pivot_wider() %>%
+  mutate(big3=iit + gst + cit) %>%
+  select(year, iit, gst, cit, big3) %>%
+  pivot_longer(-year) %>%
+  group_by(name) %>%
+  arrange(year) %>%
+  mutate(ptrend=fpoly(value, 5),
+         htrend=hptrend(value, smooth=100),
+         htrend65=hptrend(value, smooth=6.5),
+         trend=htrend65,
+         detrend=(value - trend) /  trend * 100)
+
+taxcomp %>%
+  filter(year %in% 1970:2014) %>%
+  ggplot(aes(year, detrend, colour=name)) +
+  geom_line() +
+  geom_point() +
+  theme_bw() +
+  geom_hline(yintercept = 0)
+
+
+taxcomp %>%
+  filter(year %in% 1971:2014) %>%
+  filter(name %in% c("iit")) %>%
+  ggplot(aes(year, detrend, colour=name)) +
+  geom_line() +
+  geom_point() +
+  theme_bw() +
+  geom_hline(yintercept = 0)
+
+
+# Table 1 - can I reproduce? ----
+t1 <- taxkeep %>%
+  filter(stabbr!="US", name %in% c("iit", "cit", "gst"), year %in% 1970:2014) %>%
+  group_by(stabbr,  year) %>%
+  summarise(value=sum(value, na.rm=TRUE), .groups="drop") %>%
+  group_by(stabbr) %>%
+  arrange(year) %>%
+  mutate(pch=value / lag(value) * 100 - 100,
+         apch=abs(pch),
+         period=case_when(year <= 2000 ~ "first",
+                          TRUE ~ "second"),
+         ydum=ifelse(year > 1999, 1, 0) %>% as.factor()) %>%
+  filter(year %in% 1971:2014) %>%
+  ungroup()
+
+mod <- lm(apch ~ stabbr + stabbr:ydum -1, data=t1)
+summary(mod)
+
+t1 %>%
+  group_by(stabbr, period) %>%
+  summarise(apch=mean(apch)) %>%
+  pivot_wider(names_from=period, values_from = apch) %>%
+  mutate(change=second - first)
 
 
 
