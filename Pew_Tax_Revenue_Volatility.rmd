@@ -105,6 +105,7 @@ devtools::session_info()
 # devtools::package_info()
 
 # added this line on linux branch
+# now another line
 
 ```
 
