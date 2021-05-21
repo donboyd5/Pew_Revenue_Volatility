@@ -72,7 +72,20 @@ always_allow_html: yes
     df_print: paged
     number_sections: yes
 
-renv::snapshot() to save the state of the project library to the lockfile (renv.lock),
+# further notes
+# to get it all started:
+# renv::init()
+
+# to remove it all:
+# renv::deactivate()
+# then delete the renv folder
+
+# periodically execute:
+# renv::snapshot()
+
+# to see what directory is being used by renv for local package sources, execute:
+# renv:::renv_paths_local()
+
 -->
 
 
