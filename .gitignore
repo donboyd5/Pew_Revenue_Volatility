@@ -8,6 +8,7 @@
 *.htm*
 *.md
 *.pdf
+*.RData
 *.rds
 *.xl*
 ignore/
