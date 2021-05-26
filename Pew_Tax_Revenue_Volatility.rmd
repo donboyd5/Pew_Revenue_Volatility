@@ -300,7 +300,8 @@ ggsave(filename = here::here("results", "tax_gdp_us.png"), plot = p2)
 +  [Zotero folder](https://www.zotero.org/groups/2541602/pew_tax_revenue_volatility/library)
 +  [Google sheet](https://docs.google.com/spreadsheets/d/1hSWy_7ep4RbM9lfSA-LYnDeGI1c6p9Ud0GqcSlR9xJ8/edit?usp=sharing) (barely started) to summarize important articles
 +  [Google drive folder](https://drive.google.com/drive/folders/1fM7HIP7qrKbIdndF_wQ30WxVb1j_Cq06)
-    +   Draft report is stored here (latest version has highest number in parentheses)
+    +   Draft report: [Google docs](https://docs.google.com/document/d/13MaAnySHpE8ODvvRjraMPtR7l6GFCX_hk7qDP2KC_s8/edit?usp=sharing) is current version
+    +   OLD VERSION: Draft report is stored here (latest version has highest number in parentheses)
 
 
 ## Goals and issues
