@@ -132,19 +132,36 @@ devtools::session_info()
 # What this program does
 
 *   General files
-    +   State fiscal year for each state
+    +   State fiscal year for each state (sfy_startmonths)
+    +   save all in (general.rdata)
     
-*   NIPA national data
+*   NIPA national data saved in (econ_national.rdata)
     +   Data frames on state fiscal year basis, 1947-2019
-        +   national GDP (nominal)
-        +   GDP price index
-    +   Recessions data frame
+    +   national nominal GDP, state fiscal year basis, 1947-2019 (gdpfy)
+    +   national GDP price index, state fiscal year basis, 1947-2019 (gdppi)
+    +   Recession dates data frame (recessions)    +   
     
-*   NIPA national data for classifying recessions (not yet saved)
-    +   CIGXM quarterly 1929- mid 2020
-    +   Industrial data
+*   NIPA national data for classifying recessions saved in (not yet saved)    +   
+    +   CIGXM quarterly 1929- mid 2020 ()
+    +   Industrial data ()   
     
+*   State economic data saved in (econ_state.rdata)
+    +   state gdp, state fiscal year basis, real and nominal (sgdpfy)
+    
+*   Tax data saved in (taxdata.rdata)
+    +   Census by state and tax type, summarized by category,  annual (taxkeep)
+    
+    
+# Test load data
 
+```{r get_data}
+# source(here::here("r", "functions.r"))
+load(file = here::here("data", "general.RData"), verbose=TRUE)
+load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
+load(file = here::here("data", "econ_state.RData"), verbose=TRUE)
+load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
+
+```
 
 
 # Data prep
@@ -218,7 +235,7 @@ save(sfy_startmonths, file = here::here("data", "general.RData"))
 ```
 
 
-## NIPA national data
+## National data
 
 *   I have a package called `BEAData` that includes virtually all major data from the Bureau of Economic Analysis (BEA) in relation to the National Income and Products Accounts (NIPA) and in relation to regional data.
 *   For details on data creation see the [github site](https://github.com/donboyd5/BEAData).
@@ -262,7 +279,19 @@ gdppi <- nipa %>%
   mutate(igdppi=gdppi[year==baseyear] / gdppi) 
 summary(gdppi)
 
+```
+
+
+```{r nber_recessions}
+# I have a data frame in the package bdata that has NBER recession dates
+# they are pulled from the NBER recessions page, updated in May 2020
+# https://www.nber.org/research/data/us-business-cycle-expansions-and-contractions
+# see my github page https://github.com/donboyd5/bdata
+# particularly https://github.com/donboyd5/bdata/blob/master/DataConversionPrograms/bdata_recessions.R
+# data(package="bdata")
+# comment(recessions)
 recessions # 1857, ..., 2020
+
 
 ```
 
@@ -308,13 +337,13 @@ mtables <- count(tmp, tabname)
 # Table 6.16D. Corporate Profits by Industry
 # Table 6.5D. Full-Time Equivalent Employees by Industry
 
-#..Employment breakdown ----
+#.. Employment breakdown ----
 # https://www.bls.gov/web/empsit/cesseriespub.htm
 # https://download.bls.gov/pub/time.series/ce/ce.data.01a.CurrentSeasAE  
 # https://download.bls.gov/pub/time.series/ce/ce.txt says:
 # ce.data.01a.CurrentSeasAE - contains every seasonally adjusted all employee series and its complete history.    
 
-#..Causes and characteristics ----
+#.. Causes and characteristics ----
 # https://www.investopedia.com/articles/economics/08/past-recessions.asp
 # inflation: 1969
 # oil and energy crises: 1973, 1980, 1981
@@ -332,13 +361,64 @@ mtables <- count(tmp, tabname)
 # unemployment rate
 
 ```
+
+
+```{r national_capital_gains}
+# historical capital gains for the U.S., annual, calendar (tax) year
+# primary sourdces are U.S. Treasury for data before 1995, and CBO for 1995+
+# note that ~ 2020+ is CBO forecasts
+# see spreadsheet for further details on sources
+fn <- "NationalCapitalGains.xlsx"
+sheet <- "CapGains"
+capgains <- read_excel(here::here("data", fn), sheet=sheet, range="A5:B83", 
+                       col_types = c())
+capgains <- capgains %>%
+  mutate(year=as.integer(year),
+         capgains=capgains * 1000)  # put it in millinos of dollars
+glimpse(capgains)
+
+```
+
+
     
     
 ```{r save_econ_national}
-save(gdpfy, gdppi, recessions, file = here::here("data", "econ_national.RData"))
+save(gdpfy, gdppi, recessions, capgains, file = here::here("data", "econ_national.RData"))
 
 ```
-    
+
+
+## BEA state GDP data
+```{r gdp_sfy}
+data(package="BEAData")
+# glimpse(sgdp.q)
+summary(sgdp.q)  # starts in 2005-01-01 so this will not be good
+summary(sgdp.a) # 1997-2019, only a bit better
+summary(sgdp_spliced.a)  # 1963-2019 -- good
+count(sgdp_spliced.a, name) # gdp and rgdp
+
+df <- sgdp_spliced.a %>%
+  left_join(sfy_startmonths, by = "stabbr") %>%
+  group_by(stabbr, name) %>%
+  mutate(lagvalue=value[match(year - 1, year)],
+         current_share=(startmonth - 1) / 12,
+         value_sfy=value * current_share + lagvalue * (1 - current_share))
+df
+
+sgdpfy <- df %>%
+  ungroup %>%
+  filter(!is.na(value_sfy)) %>%
+  select(year, stabbr, name, value=value_sfy)
+summary(sgdpfy)
+
+
+```
+
+```{r save_econ_state}
+save(sgdpfy, file = here::here("data", "econ_state.RData"))
+
+```
+
     
 ## Census Bureau tax data
 
@@ -767,24 +847,22 @@ df %>%
 ## Calculate volatility measures
 
 ```{r vfunctions}
-hp_df <- function(df, vname, smooth=NULL){
-  print(nrow(df))
-  print(df)
-  vts <- ts(df[vname])
-  vts_hp <- hpfilter(vts, freq=smooth, type=c("lambda"), drift=FALSE)
-  df %>% 
-    mutate(trend=as.numeric(vts_hp$trend),
-           cycle=as.numeric(vts_hp$cycle))
+hpdf <- function(data) {
+  mod <- hpfilter(data$value, freq=6.25, type=c("lambda"), drift=FALSE)
+  tibble(trend=as.numeric(mod$trend),
+         cycle=as.numeric(mod$cycle))
 }
 
-hpv <- function(vec, smooth=NULL){
-  print(length(vec))
-  vts <- ts(vec)
-  vts_hp <- hpfilter(vts, freq=smooth, type=c("lambda"), drift=FALSE)
-  df %>% 
-    mutate(trend=as.numeric(vts_hp$trend),
-           cycle=as.numeric(vts_hp$cycle))
+
+dl <- function(vec) {
+  # change in log
+  # ASSUME data are soreted by year and there are no gaps and no zeros
+  lvec = log(vec)
+  laglvec = c(NA, head(lvec, -1))
+  lvec - laglvec
 }
+
+
 
 ```
 
@@ -810,23 +888,79 @@ typeof(res)
 res$trend[, 1]
 
 
-hp2 <- function(data) {
-  mod <- hpfilter(data$value, freq=6.25, type=c("lambda"), drift=FALSE)
-  tibble(trend=as.numeric(mod$trend),
-         cycle=as.numeric(mod$cycle))
-}
 
-count(taxkeep, name)
 
 df2 <- taxkeep %>%
+  left_join(sgdpfy %>%
+              filter(name=="gdp") %>%
+              rename(gdp=value) %>%
+              select(year, stabbr, gdp),
+            by=c("stabbr", "year")) %>%
   arrange(stabbr, name, year) %>% 
   group_by(stabbr, name) %>%
   mutate(pch=value / value[match(year - 1, year)] * 100 - 100,
-         pch_rollsd = rollsd(pch, 10)) %>%
-  filter(year >= 1960) %>%
+         pch_rollsd = rollsd(pch, 10),
+         dlvalue=dl(value),
+         dlgdp=dl(gdp)) %>%
+  filter(year >= 1964) %>%
   ungroup %>%
   group_nest(stabbr, name) %>%
-  mutate(mod=map(data, hp2))
+  mutate(hpf=map(data, hpdf),
+         sre=map(data, srddf))
+
+# Problem with `mutate()` column `dlvalue`.
+# ℹ `dlvalue = dl(value)`.
+# ℹ NaNs produced
+# ℹ The warning occurred in group 224: stabbr = "OH", name = "cit". 
+
+
+sredf <- function(data) {
+  # short-run elasticity
+  mod = lm(dlvalue ~ dlgdp, data=data)
+  list(mod=mod, coeff=unname(mod$coefficients["dlgdp"]))
+}
+
+tmp <- df2 %>%
+  filter(stabbr=="NY", name=="iit", year >= 1965) %>%
+  nest()
+
+tmp2 <- tmp %>%
+  mutate(sre=map(data, sredf))
+tmp2$sre
+
+mod <- lm(dlvalue ~ dlgdp, data=tmp$data[[1]])
+str(mod)
+str(mod$coefficients["dlgdp"])
+mod$coefficients["dlgdp"]
+unname(mod$coefficients["dlgdp"])
+str(coef(mod))
+
+
+names(belchers$info[[1]])
+belchers %>% hoist(info,
+  name = "name",
+  age = "age",
+  dad = "father",
+  firstborn = list("children", 1L)
+)
+
+names(tmp2$sre[[1]])
+tmp2 %>%
+  ungroup %>%
+  hoist(sre,
+        # mod="mod",
+        coeff="coeff")
+
+tmp2 %>%
+  unnest(sre)
+tmp2 %>%
+  unnest_wider(sre)
+
+tmp2 %>%
+  hoist(sre, "coeff")
+
+tmp2 %>%
+  unnest_wider(sre$coeff)
 
 
 df3 <- df2 %>%

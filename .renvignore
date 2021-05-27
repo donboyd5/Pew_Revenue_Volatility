@@ -1,0 +1,17 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.csv
+*.doc*
+*.gz
+*.htm*
+*.md
+*.pdf
+*.RData
+*.rds
+*.xl*
+notes/
+data/
+results/
+temp/
