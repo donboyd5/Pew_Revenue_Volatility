@@ -8,6 +8,7 @@
 *.htm*
 *.md
 *.pdf
+*.png
 *.RData
 *.rds
 *.xl*

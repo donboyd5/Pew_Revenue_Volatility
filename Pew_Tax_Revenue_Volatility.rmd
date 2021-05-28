@@ -21,6 +21,9 @@ editor_options:
 <!-- } -->
 <!-- </style> -->
 
+<!-- Googe drive -->
+<!-- https://drive.google.com/drive/folders/1fM7HIP7qrKbIdndF_wQ30WxVb1j_Cq06 -->
+
 
 ```{r runall, eval=FALSE, echo=FALSE} 
 # When we want a final report, run the following code selectively "by hand" (interactively)
@@ -117,9 +120,6 @@ source(here::here("r", "functions.r"))
 devtools::session_info()
 # devtools::package_info()
 
-# added this line on linux branch
-# now another line
-
 ```
 
 
@@ -214,12 +214,16 @@ df %>%
 ```
 
 
-```{r cggdp_plot}
+```{r cggdp_plot, fig.height=6, fig.width=6}
 # fix to use calendar year??
 rec <- recessions %>%
   filter(rec_year > 1953)
 
-df %>%
+anno <- df %>%
+  filter(stabbr=="US") %>%
+  mutate(cggdp=cggdp / 100)
+
+p <- df %>%
   filter(stabbr=="US") %>%
   select(year, cggdp) %>%
   ggplot(aes(year, cggdp / 100)) +
@@ -229,13 +233,19 @@ df %>%
   scale_x_continuous(name=NULL, breaks=seq(1950, 2030, 5)) +
   gband(rec$peak_decimal, rec$trough_decimal) +
   geom_hline(aes(yintercept=median(cggdp, na.rm=TRUE) / 100)) +
+  # annotate("text", x=1955, y=median(anno$cggdp, na.rm=TRUE) +.005, label = "median", size=2.5) +
+  annotate("text", x=1955, y=median(.data$cggdp / 100, na.rm=TRUE) +.005, label = "median", size=2.5) +
+  annotate("text", x=1955, y=median(.data$cggdp, na.rm=TRUE) +.005, label = "median", size=2.5) +
   # annotate("text", aes(x = year[year==1985], y = cggdp[year==1985]), label = "Some text")
-  annotate("text", x=1988, y=.075, label = "Federal\ntax reform", size=2.5) +
+  annotate("text", x=1987, y=.0765, label = "Federal\ntax reform", size=2.5) +
+  annotate("text", x=2000.25, y=.0675, label = "Dot-com\nbubble", size=2.5) +
+  annotate("text", x=2007.25, y=.0685, label = "Real estate\nbubble", size=2.5) +
   ggtitle("Capital gains as a percent of GDP",
           subtitle = "Recession periods are shaded") +
   labs(caption="Horizontal line marks median for the period shown") +
   theme_report
-
+p
+ggsave(filename = here::here("results", "cggdp_us.png"), plot = p, width=8, height=6)
 
 
 # theme(
@@ -253,6 +263,54 @@ df %>%
 
 
 
+# Series generation
+```{r}
+nyears <- 30
+base <- 100
+grate <- .03
+set.seed(1)
+grvec <- (1 + grate)^(0:(nyears - 1))
+noise <- rnorm(nyears, mean=0, sd=1)
+shock_pattern <- c(0, 0, 0, 0, 0, .1)
+
+pattern_smooth <- seq(.10, -.10, length.out=10)
+# shock_smooth <- rep_len(pattern_smooth, nyears)
+shock_smooth <- rep_len(c(pattern_smooth, -pattern_smooth), nyears)
+
+shock_smooth
+
+df <- tibble(time=1:nyears + 2024,
+             trend=base*grvec) %>%
+  mutate(tnoise=trend * (1 + noise/25),
+         tsmooth=trend * (1 - shock_smooth)* (1 + noise/50))
+
+dfl <- df %>%
+  pivot_longer(-time) %>%
+  group_by(name) %>%
+  arrange(time) %>%
+  mutate(pch=pchya(value, time)) %>%
+  group_by(time) %>%
+  mutate(diff=value - value[name=="trend"],
+         pdiff=diff / value[name=="trend"] * 100) %>%
+  ungroup
+
+dfl %>%
+  ggplot(aes(time, value, colour=name)) +
+  geom_line() +
+  scale_y_continuous(limits=c(0, NA))
+
+dfl %>%
+  ggplot(aes(time, pch, colour=name)) +
+  geom_line() +
+  scale_y_continuous()
+
+dfl %>%
+  ggplot(aes(time, pdiff, colour=name)) +
+  geom_line()
+
+
+
+```
 
 
 
