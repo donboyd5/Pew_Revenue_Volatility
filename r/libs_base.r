@@ -16,6 +16,7 @@ library(modelr)
 library(janitor)
 
 library(grDevices)
+library(gridExtra)
 library(knitr)
 library(kableExtra)
 

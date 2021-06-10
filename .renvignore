@@ -8,12 +8,10 @@
 *.htm*
 *.md
 *.pdf
-*.png
 *.RData
 *.rds
 *.xl*
-ignore/
+notes/
 data/
-libs/
-project_analysis/
+results/
 temp/
