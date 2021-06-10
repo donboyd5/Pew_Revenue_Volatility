@@ -9,8 +9,12 @@ output:
     fig_width: 8
     toc: yes
     toc_depth: 3
-    toc_float: true
+    toc_float: yes
     number_sections: yes
+  html_document:
+    toc: yes
+    toc_depth: '3'
+    df_print: paged
 editor_options:
   chunk_output_type: console
 ---
@@ -21,7 +25,7 @@ editor_options:
 <!-- } -->
 <!-- </style> -->
 
-<!-- Googe drive -->
+<!-- Google drive -->
 <!-- https://drive.google.com/drive/folders/1fM7HIP7qrKbIdndF_wQ30WxVb1j_Cq06 -->
 
 
@@ -145,8 +149,14 @@ theme_report <- theme_bw() +
     )
 
 
-```
+nolegend <- theme(legend.position = "none")
+nolegend_title <- theme(legend.title = element_blank())
 
+bluered <- c("blue", "red")  # #a50f15 darkred
+color2 <- c("blue", "red")
+
+
+```
 
 
 # Scene setting - exploration of patterns
@@ -160,160 +170,48 @@ theme_report <- theme_bw() +
 ```{r}
 
 glimpse(taxkeep)
+ df <- taxkeep %>%
+   filter(stabbr=="US", name=="tottax") %>%
+   select(year, tax=value) %>%
+   inner_join(gdppi %>% select(year, gdppi), by="year") %>%
+   pivot_longer(-year) %>%
+   group_by(name) %>%
+   mutate(pch=pchya(value, year)) %>%
+   ungroup
+ 
 
-df2 %>%
-  filter(year >= 1970) %>%
-  ggplot(aes(year, vol2, colour=name)) +
+p <- df %>%
+  filter(year >= 1955) %>%
+  mutate(name=factor(name, levels=c("tax", "gdppi"), labels=c("taxes", "inflation"))) %>%
+  ggplot(aes(year, pch, colour=name)) +
   geom_line() +
   geom_point() +
   geom_hline(yintercept = 0) +
-  scale_x_continuous(name=NULL) +
-  scale_y_continuous(name="volatility (% difference from smoothed trend)",
+  scale_x_continuous(name=NULL, breaks=seq(1955, 2025, 5)) +
+  scale_y_continuous(name="% change",
                      breaks=seq(-20, 20, 2)) +
-  ggtitle("Volatility of State Government Tax Revenue and Gross Domestic Product, United States",
-          subtitle="Volatility measured as % difference from smoothed trend (HP filter)") +
-  theme_bw()
+  ggtitle("% change in tax revenue and general price level, United States") +
+  scale_colour_manual(values=rev(bluered)) +
+  theme_report +
+  nolegend_title
+p 
+ggsave(filename = here::here("results", "gpppi_tax_us.png"), plot = p, width=8, height=6)
+ 
+
+# df2 %>%
+#   filter(year >= 1970) %>%
+#   ggplot(aes(year, vol2, colour=name)) +
+#   geom_line() +
+#   geom_point() +
+#   geom_hline(yintercept = 0) +
+#   scale_x_continuous(name=NULL) +
+#   scale_y_continuous(name="volatility (% difference from smoothed trend)",
+#                      breaks=seq(-20, 20, 2)) +
+#   ggtitle("Volatility of State Government Tax Revenue and Gross Domestic Product, United States",
+#           subtitle="Volatility measured as % difference from smoothed trend (HP filter)") +
+#   theme_bw()
 
 ```
-
-
-# Capital gains
-```{r}
-# % change in gdp, tax revenue, cg
-df <- gdpfy %>%
-  full_join(capgains,
-            by="year") %>%
-  full_join(taxkeep %>%
-              filter(name %in% c("tottax", "iit", "gst")) %>%
-              rename(tax=value),
-            by="year") %>%
-  drop_na() %>%
-  group_by(stabbr, name) %>%
-  arrange(year) %>%
-  mutate(gdp_pch=pchya(gdp, year),
-         cg_pch=pchya(capgains, year),
-         tax_pch=pchya(tax, year),
-         cggdp=capgains / gdp * 100) %>%
-  ungroup
-  
-```
-
-
-```{r gdpcgtax_plot}
-df %>%
-  filter(stabbr=="US") %>%
-  select(year, gdp_pch, cg_pch, tax_pch) %>%
-  pivot_longer(-year) %>%
-  ggplot(aes(year, value, colour=name)) +
-    geom_point() +
-    geom_line() +
-    geom_hline(yintercept = 0) +
-  ggtitle("Percent change in GDP, capital gains, and tax revenue for the United States",
-          subtitle = "Not adjusted for inflation")
-  
-```
-
-
-```{r cggdp_plot, fig.height=6, fig.width=6}
-# fix to use calendar year??
-rec <- recessions %>%
-  filter(rec_year > 1953)
-
-anno <- df %>%
-  filter(stabbr=="US") %>%
-  mutate(cggdp=cggdp / 100)
-
-p <- df %>%
-  filter(stabbr=="US") %>%
-  select(year, cggdp) %>%
-  ggplot(aes(year, cggdp / 100)) +
-  geom_point(colour="blue") +
-  geom_line(colour="blue") +
-  scale_y_continuous(name="% of GDP", labels=scales::percent_format(accuracy = .1), limits=c(0, NA)) +
-  scale_x_continuous(name=NULL, breaks=seq(1950, 2030, 5)) +
-  gband(rec$peak_decimal, rec$trough_decimal) +
-  geom_hline(aes(yintercept=median(cggdp, na.rm=TRUE) / 100)) +
-  # annotate("text", x=1955, y=median(anno$cggdp, na.rm=TRUE) +.005, label = "median", size=2.5) +
-  annotate("text", x=1955, y=median(.data$cggdp / 100, na.rm=TRUE) +.005, label = "median", size=2.5) +
-  annotate("text", x=1955, y=median(.data$cggdp, na.rm=TRUE) +.005, label = "median", size=2.5) +
-  # annotate("text", aes(x = year[year==1985], y = cggdp[year==1985]), label = "Some text")
-  annotate("text", x=1987, y=.0765, label = "Federal\ntax reform", size=2.5) +
-  annotate("text", x=2000.25, y=.0675, label = "Dot-com\nbubble", size=2.5) +
-  annotate("text", x=2007.25, y=.0685, label = "Real estate\nbubble", size=2.5) +
-  ggtitle("Capital gains as a percent of GDP",
-          subtitle = "Recession periods are shaded") +
-  labs(caption="Horizontal line marks median for the period shown") +
-  theme_report
-p
-ggsave(filename = here::here("results", "cggdp_us.png"), plot = p, width=8, height=6)
-
-
-# theme(
-#   plot.title = element_text(),
-#   plot.subtitle.title = element_text(),
-#   plot.caption = element_text()
-# )
-
-# p + theme(
-#   plot.caption = element_text(hjust = 0)
-#   )
-
-  
-```
-
-
-
-# Series generation
-```{r}
-nyears <- 30
-base <- 100
-grate <- .03
-set.seed(1)
-grvec <- (1 + grate)^(0:(nyears - 1))
-noise <- rnorm(nyears, mean=0, sd=1)
-shock_pattern <- c(0, 0, 0, 0, 0, .1)
-
-pattern_smooth <- seq(.10, -.10, length.out=10)
-# shock_smooth <- rep_len(pattern_smooth, nyears)
-shock_smooth <- rep_len(c(pattern_smooth, -pattern_smooth), nyears)
-
-shock_smooth
-
-df <- tibble(time=1:nyears + 2024,
-             trend=base*grvec) %>%
-  mutate(tnoise=trend * (1 + noise/25),
-         tsmooth=trend * (1 - shock_smooth)* (1 + noise/50))
-
-dfl <- df %>%
-  pivot_longer(-time) %>%
-  group_by(name) %>%
-  arrange(time) %>%
-  mutate(pch=pchya(value, time)) %>%
-  group_by(time) %>%
-  mutate(diff=value - value[name=="trend"],
-         pdiff=diff / value[name=="trend"] * 100) %>%
-  ungroup
-
-dfl %>%
-  ggplot(aes(time, value, colour=name)) +
-  geom_line() +
-  scale_y_continuous(limits=c(0, NA))
-
-dfl %>%
-  ggplot(aes(time, pch, colour=name)) +
-  geom_line() +
-  scale_y_continuous()
-
-dfl %>%
-  ggplot(aes(time, pdiff, colour=name)) +
-  geom_line()
-
-
-
-```
-
-
-
 
 
 
@@ -344,7 +242,7 @@ hpdf <- function(data) {
 
 dl <- function(vec) {
   # change in log
-  # ASSUME data are soreted by year and there are no gaps and no zeros
+  # ASSUME data are sorted by year and there are no gaps and no zeros
   lvec = log(vec)
   laglvec = c(NA, head(lvec, -1))
   lvec - laglvec
@@ -353,9 +251,177 @@ dl <- function(vec) {
 ```
 
 
+```{r}
+# generate series with two kinds of volatility
+nyears <- 30
+base <- 100
+grate <- .03
+set.seed(12)
+grvec <- (1 + grate)^(0:(nyears - 1))  # growth vector
+noise <- rnorm(nyears, mean=0, sd=1)  # noise vector
+shock_pattern <- c(0, 0, 0, 0, 0, .1)
+
+pattern_smooth <- seq(.10, -.10, length.out=10)
+# shock_smooth <- rep_len(pattern_smooth, nyears)
+shock_smooth <- rep_len(c(pattern_smooth, -pattern_smooth), nyears) # smooth shock goes down then up
+
+shock_smooth
+
+# force our recession shock and random shocks to start at zero - drop last element of each vector
+znoise = c(0, head(noise, -1))
+zsmooth = c(0, head(shock_smooth, -1))
+
+sum(znoise)
+sum(zsmooth)
+sum(abs(znoise))
+sum(abs(zsmooth))
+
+# force similar noise
+ratio <- sum(abs(znoise)) / sum(abs(zsmooth))
+
+
+df <- tibble(time=1:nyears, # + 2024,
+             trend=base*grvec) %>%
+  mutate(tnoise=trend * (1 + znoise / ratio),
+         tsmooth=trend * (1 - zsmooth)) %>%
+  mutate(tnoise = tnoise * sum(trend) / sum(tnoise),
+         tsmooth = tsmooth * sum(trend) / sum(tsmooth),
+         tnoise=ifelse(time==1, trend, tnoise),
+         tsmooth=ifelse(time==1, trend, tsmooth))
+
+# df <- tibble(time=1:nyears, # + 2024,
+#              trend=base*grvec) %>%
+#   mutate(tnoise=trend * (1 + znoise/25),
+#          tsmooth=trend * (1 - zsmooth)* (1 + znoise/50))
+
+
+dfl <- df %>%
+  pivot_longer(-time) %>%
+  group_by(name) %>%
+  arrange(time) %>%
+  mutate(pch=pchya(value, time),
+         pch=ifelse(time==1, 0, pch)) %>%
+  group_by(time) %>%
+  mutate(dpch=(pch - pch[name=="trend"]) /100,
+         dtrend=value - value[name=="trend"],
+         pdtrend=dtrend / value[name=="trend"]) %>%
+  ungroup
+glimpse(dfl)
+
+dfl %>%
+  group_by(name) %>%
+  summarise(value=sum(value))
+
+dfl %>% filter(name=="tnoise")
+dfl %>% filter(name=="tsmooth")
+# our first panel is trend, random shock, and cyclical shock
+
+
+```
+
+
+## Two kinds of revenue volatility
+```{r include=TRUE, echo=FALSE}
+# plot series and percent change
+colors = c("black", "blue", "darkgreen")
+p1 <- dfl %>%
+  mutate(name=factor(name, 
+                     levels=c("trend", "tsmooth", "tnoise"),
+                     labels=c("trend", "cyclical", "random"))) %>%
+  ggplot(aes(time, value, colour=name)) +
+  geom_line() +
+  geom_hline(yintercept = 100) +
+  scale_y_continuous(name="revenue", limits=c(90, 260), labels=scales::dollar) +
+  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
+  scale_colour_manual(values=colors) +
+  ggtitle("Two kinds of revenue volatility: pure cyclical and pure random shocks",
+          subtitle="All 3 revenue series raise the same amount over 30 years") +
+  theme_report +
+  nolegend_title
+p1
+ggsave(filename = here::here("results", "trend_cycle_random.png"), plot = p1, width=8, height=6)
+
+# dev.cur()
+# dev.off()
+
+```
+
+
+
 
 ```{r}
-# data prep
+
+fdtrend <- function(type){
+  dfl %>%
+    filter(name==type) %>%
+    mutate(posneg=ifelse(pdtrend < 0, "neg", "pos")) %>%
+    ggplot(aes(time, pdtrend)) +
+    # geom_line(colour="black") +
+    geom_hline(yintercept = 0) +
+    geom_bar(stat="identity", aes(fill = posneg)) + 
+    scale_fill_manual(values=rev(bluered)) +
+    scale_x_continuous(name="year", breaks=seq(0, 100, 5)) +
+    scale_y_continuous(name="% difference from trend",
+                       breaks=seq(-.2, .2, .05), 
+                       labels=scales::percent_format(accuracy=1),
+                       limits=c(-.1, .1)) +
+    theme_report +
+    nolegend
+}
+
+
+fpdiff <- function(type){
+  dfl %>%
+    filter(name==type) %>%
+    mutate(posneg=ifelse(dpch < 0, "neg", "pos")) %>%
+    ggplot(aes(time, dpch)) +
+    # geom_line(colour="black") +
+    geom_hline(yintercept = 0) +
+    geom_bar(stat = "identity", aes(fill = posneg)) + 
+    scale_fill_manual(values=rev(bluered)) +
+    scale_x_continuous(name="year", breaks=seq(0, 100, 5)) +
+    scale_y_continuous(name="shock % growth minus trend % growth",
+                       breaks=seq(-.2, .2, .05), 
+                       labels=scales::percent_format(accuracy=1),
+                       limits=c(-.1, .1)) +
+    theme_report +
+    nolegend
+}
+
+
+
+
+p_cycle_vstrend <- fdtrend("tsmooth") + ggtitle("Shock: cyclical\nMeasure: % deviation from trend revenue")
+p_random_vstrend <- fdtrend("tnoise") + ggtitle("Shock: random\nMeasure: % deviation from trend revenue")
+
+p_cycle_vsgrowth <- fpdiff("tsmooth") + ggtitle("Shock: cyclical\nMeasure: shock % growth minus trend % growth")
+p_random_vsgrowth <- fpdiff("tnoise") + ggtitle("Shock: random\nMeasure: shock % growth minus trend % growth")
+
+ppanels <- grid.arrange(p_cycle_vstrend, p_cycle_vsgrowth, 
+             p_random_vstrend, p_random_vsgrowth, 
+             nrow = 2, top="Two kinds of volatility and two kinds of volatility measures")
+# ppanels
+# grid::grid.draw(ppanels)
+
+
+
+p_rdf <- grid.arrange(p_cycle_vstrend,
+                      p_random_vstrend, 
+             nrow = 2, top="Two kinds of volatility, % difference from trend revenue")
+grid::grid.draw(p_rdf)
+
+  
+
+# dfl %>%
+#   ggplot(aes(time, pch, colour=name)) +
+#   geom_line() +
+#   scale_y_continuous()
+# 
+# dfl %>%
+#   ggplot(aes(time, pdiff, colour=name)) +
+#   geom_line()
+
+
 
 
 ```
@@ -543,6 +609,89 @@ df3 %>%
   facet_wrap(~name, ncol=3, scales="free")
 
 
+```
+
+
+
+# Capital gains
+```{r}
+# % change in gdp, tax revenue, cg
+df <- gdpfy %>%
+  full_join(capgains,
+            by="year") %>%
+  full_join(taxkeep %>%
+              filter(name %in% c("tottax", "iit", "gst")) %>%
+              rename(tax=value),
+            by="year") %>%
+  drop_na() %>%
+  group_by(stabbr, name) %>%
+  arrange(year) %>%
+  mutate(gdp_pch=pchya(gdp, year),
+         cg_pch=pchya(capgains, year),
+         tax_pch=pchya(tax, year),
+         cggdp=capgains / gdp * 100) %>%
+  ungroup
+  
+```
+
+
+```{r gdpcgtax_plot}
+df %>%
+  filter(stabbr=="US") %>%
+  select(year, gdp_pch, cg_pch, tax_pch) %>%
+  pivot_longer(-year) %>%
+  ggplot(aes(year, value, colour=name)) +
+    geom_point() +
+    geom_line() +
+    geom_hline(yintercept = 0) +
+  ggtitle("Percent change in GDP, capital gains, and tax revenue for the United States",
+          subtitle = "Not adjusted for inflation")
+  
+```
+
+
+```{r cggdp_plot, fig.height=6, fig.width=6}
+# fix to use calendar year??
+rec <- recessions %>%
+  filter(rec_year > 1953)
+
+anno <- df %>%
+  filter(stabbr=="US") %>%
+  mutate(cggdp=cggdp / 100)
+
+p <- df %>%
+  filter(stabbr=="US") %>%
+  select(year, cggdp) %>%
+  ggplot(aes(year, cggdp / 100)) +
+  geom_point(colour="blue") +
+  geom_line(colour="blue") +
+  scale_y_continuous(name="% of GDP", labels=scales::percent_format(accuracy = .1), limits=c(0, NA)) +
+  scale_x_continuous(name=NULL, breaks=seq(1950, 2030, 5)) +
+  gband(rec$peak_decimal, rec$trough_decimal) +
+  geom_hline(aes(yintercept=median(cggdp, na.rm=TRUE) / 100)) +
+  annotate("text", x=1955, y=median(anno$cggdp, na.rm=TRUE) +.001, label = "median", size=2.5) +
+  annotate("text", x=1987, y=.0765, label = "Federal\ntax reform", size=2.5) +
+  annotate("text", x=2000.25, y=.0675, label = "Dot-com\nbubble", size=2.5) +
+  annotate("text", x=2007.25, y=.0685, label = "Real estate\nbubble", size=2.5) +
+  ggtitle("Capital gains as a percent of GDP",
+          subtitle = "Recession periods are shaded") +
+  labs(caption="Horizontal line marks median for the period shown") +
+  theme_report
+p
+ggsave(filename = here::here("results", "cggdp_us.png"), plot = p, width=8, height=6)
+
+
+# theme(
+#   plot.title = element_text(),
+#   plot.subtitle.title = element_text(),
+#   plot.caption = element_text()
+# )
+
+# p + theme(
+#   plot.caption = element_text(hjust = 0)
+#   )
+
+  
 ```
 
 
