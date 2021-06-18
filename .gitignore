@@ -16,4 +16,5 @@ ignore/
 data/
 libs/
 project_analysis/
+raw_data/
 temp/

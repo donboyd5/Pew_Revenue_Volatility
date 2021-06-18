@@ -3,12 +3,11 @@ title: "State tax revenue volatility"
 author: "Don Boyd"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output:
-  html_notebook:
+  html_notebook: 
     df_print: paged
     fig_height: 6
     fig_width: 8
     toc: yes
-    toc_depth: 3
     toc_float: yes
     number_sections: yes
   html_document:
@@ -16,7 +15,7 @@ output:
     toc_depth: '3'
     df_print: paged
 editor_options:
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 <!-- <style> -->
@@ -48,7 +47,7 @@ rmarkdown::render(rmdfn, output_format="html_document", output_file=outfn)
 
 
 ```{r setup, include=FALSE, eval=TRUE}
-knitr::opts_chunk$set(echo = FALSE, include=FALSE, eval=FALSE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo=FALSE, include=FALSE, eval=FALSE, message = FALSE, warning = FALSE)
 ```
 
 
@@ -115,7 +114,7 @@ always_allow_html: yes
 ```
 
 
-```{r get_libs_and_functions, include=FALSE, eval=TRUE}
+```{r get_libs_and_functions, eval=TRUE}
 # clear objects from the workspace
 rm(list=ls(all=TRUE))
 source(here::here("r", "libs_base.r"))
@@ -127,12 +126,10 @@ devtools::session_info()
 ```
 
 
-
-
 # Materials for report, organized by topic
 
 ## Get previously created data
-```{r get_data}
+```{r get_data, include=FALSE, eval=TRUE}
 load(file = here::here("data", "general.RData"), verbose=TRUE)
 load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
 load(file = here::here("data", "econ_state.RData"), verbose=TRUE)
@@ -142,7 +139,7 @@ load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
 
 
 ## Constants, themes, etc.
-```{r}
+```{r include=FALSE, eval=TRUE}
 theme_report <- theme_bw() + 
   theme(
     plot.caption = element_text(hjust = 0)
@@ -167,10 +164,10 @@ color2 <- c("blue", "red")
 
 
 ### Inflation
-```{r}
+```{r include=FALSE, eval=TRUE}
 
-glimpse(taxkeep)
- df <- taxkeep %>%
+glimpse(censustax)
+ df <- censustax %>%
    filter(stabbr=="US", name=="tottax") %>%
    select(year, tax=value) %>%
    inner_join(gdppi %>% select(year, gdppi), by="year") %>%
@@ -219,39 +216,7 @@ ggsave(filename = here::here("results", "gpppi_tax_us.png"), plot = p, width=8, 
 # Alternative volatility measures
 
 
-```{r functions}
-hp_df <- function(df, vname, smooth=NULL){
-  vts <- ts(df[vname])
-  vts_hp <- hpfilter(vts, freq=smooth, type=c("lambda"), drift=FALSE)
-  df %>% 
-    mutate(trend=as.numeric(vts_hp$trend),
-           cycle=as.numeric(vts_hp$cycle))
-}
-
-hptrend <- function(vec, smooth=NULL){
-  vts_hp <- hpfilter(ts(vec), freq=smooth, type=c("lambda"), drift=FALSE)
-  as.numeric(vts_hp$trend)
-}
-
-hpdf <- function(data) {
-  mod <- hpfilter(data$value, freq=6.25, type=c("lambda"), drift=FALSE)
-  tibble(trend=as.numeric(mod$trend),
-         cycle=as.numeric(mod$cycle))
-}
-
-
-dl <- function(vec) {
-  # change in log
-  # ASSUME data are sorted by year and there are no gaps and no zeros
-  lvec = log(vec)
-  laglvec = c(NA, head(lvec, -1))
-  lvec - laglvec
-}
-
-```
-
-
-```{r}
+```{r include=FALSE, eval=TRUE}
 # generate series with two kinds of volatility
 nyears <- 30
 base <- 100
@@ -320,36 +285,27 @@ dfl %>% filter(name=="tsmooth")
 ```
 
 
-## Two kinds of revenue volatility
-```{r include=TRUE, echo=FALSE}
-# plot series and percent change
-colors = c("black", "blue", "darkgreen")
-p1 <- dfl %>%
-  mutate(name=factor(name, 
-                     levels=c("trend", "tsmooth", "tnoise"),
-                     labels=c("trend", "cyclical", "random"))) %>%
-  ggplot(aes(time, value, colour=name)) +
-  geom_line() +
-  geom_hline(yintercept = 100) +
-  scale_y_continuous(name="revenue", limits=c(90, 260), labels=scales::dollar) +
-  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
-  scale_colour_manual(values=colors) +
-  ggtitle("Two kinds of revenue volatility: pure cyclical and pure random shocks",
-          subtitle="All 3 revenue series raise the same amount over 30 years") +
-  theme_report +
-  nolegend_title
-p1
-ggsave(filename = here::here("results", "trend_cycle_random.png"), plot = p1, width=8, height=6)
+## Kinds of volatility
 
-# dev.cur()
-# dev.off()
+States generally face two kinds of volatility: cyclical volatility, often following the business cycle, and random volatility.
 
-```
+In this section we examine three revenue series:
+
++   Simple trend that grows at 3% per year
++   Revenue source that has pure cyclical volatility
++   Revenue source with random volatility. 
+
+
+All three revenue series raise the same amount of money over 30 years.
+
+For each of the following graphs, ask:
+
++   Which revenue source would require a **larger rainy day fund** if a state wanted to protect against long downturns?
++   Which revenue source would be **harder to forecast** if the state were focused on avoiding unanticipated budgfet shortfalls?
 
 
 
-
-```{r}
+```{r eval=TRUE}
 
 fdtrend <- function(type){
   dfl %>%
@@ -389,6 +345,11 @@ fpdiff <- function(type){
 }
 
 
+# ppanels <- grid.arrange(p_cycle_vstrend, p_cycle_vsgrowth, 
+#              p_random_vstrend, p_random_vsgrowth, 
+#              nrow = 2, top="Two kinds of volatility and two kinds of volatility measures")
+# ppanels
+# grid::grid.draw(ppanels)
 
 
 p_cycle_vstrend <- fdtrend("tsmooth") + ggtitle("Shock: cyclical\nMeasure: % deviation from trend revenue")
@@ -397,62 +358,181 @@ p_random_vstrend <- fdtrend("tnoise") + ggtitle("Shock: random\nMeasure: % devia
 p_cycle_vsgrowth <- fpdiff("tsmooth") + ggtitle("Shock: cyclical\nMeasure: shock % growth minus trend % growth")
 p_random_vsgrowth <- fpdiff("tnoise") + ggtitle("Shock: random\nMeasure: shock % growth minus trend % growth")
 
-ppanels <- grid.arrange(p_cycle_vstrend, p_cycle_vsgrowth, 
-             p_random_vstrend, p_random_vsgrowth, 
-             nrow = 2, top="Two kinds of volatility and two kinds of volatility measures")
-# ppanels
-# grid::grid.draw(ppanels)
+
+```
 
 
+### Comparing AMOUNT (level) of revenue relative to trend
+
+We begin by comparing actual revenue to trend revenue. 
+
+
+```{r eval=TRUE, include=TRUE}
+# plot series and percent change
+colors = c("black", "blue", "darkgreen")
+p1 <- dfl %>%
+  mutate(name=factor(name, 
+                     levels=c("trend", "tsmooth", "tnoise"),
+                     labels=c("trend", "cyclical", "random"))) %>%
+  ggplot(aes(time, value, colour=name)) +
+  geom_line() +
+  geom_hline(yintercept = 100) +
+  scale_y_continuous(name="revenue", limits=c(90, 260), labels=scales::dollar) +
+  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
+  scale_colour_manual(values=colors) +
+  ggtitle("Two kinds of revenue volatility: pure cyclical and pure random shocks",
+          subtitle="All 3 revenue series raise the same amount over 30 years") +
+  theme_report +
+  nolegend_title
+p1
+ggsave(filename = here::here("results", "trend_cycle_random_level.png"), plot = p1, width=8, height=6)
+
+# dev.cur()
+# dev.off()
+
+```
+
+
+The two-panel graph below shows actual revenue minus trend revenue for each source. 
+
++   Which of the two kinds of volatility would subject the state to long periods of shortfalls and might suggest the need for a larger rainy day fund?
++   Which revenue source has greater year-to-year variation and might be more difficult to forecast? How easily can we tell that if we compare to the trend?
+
+In the graph, cyclical volatility subjects the state to long consecutive periods of underperformance and overperformance, suggesting the need for a larger rainy day fund. The deviation-from-trend measure makes this clear.
+
+It's not clear from the graph which form of cyclicality subjects the state to greater year-to-year uncertainty: the deviation-from-trend measure does not tell us much about this.
+
+
+```{r include=TRUE, eval=TRUE, fig.width=6, fig.height=9}
 
 p_rdf <- grid.arrange(p_cycle_vstrend,
                       p_random_vstrend, 
              nrow = 2, top="Two kinds of volatility, % difference from trend revenue")
 grid::grid.draw(p_rdf)
 
-  
-
-# dfl %>%
-#   ggplot(aes(time, pch, colour=name)) +
-#   geom_line() +
-#   scale_y_continuous()
-# 
-# dfl %>%
-#   ggplot(aes(time, pdiff, colour=name)) +
-#   geom_line()
-
-
+ggsave(filename = here::here("results", "dev_trend.png"), plot = p_rdf, width=8, height=12)
 
 
 ```
 
 
+## Comparing revenue GROWTH RATES relative to trend growth rates 
+
+Next we compare growth rates of actual revenue to growth rates for trend revenue. 
+
+
+
+```{r eval=TRUE, include=TRUE}
+# percent change
+colors = c("black", "blue", "darkgreen")
+p2 <- dfl %>%
+  mutate(name=factor(name, 
+                     levels=c("trend", "tsmooth", "tnoise"),
+                     labels=c("trend", "cyclical", "random"))) %>%
+  ggplot(aes(time, pch / 100, colour=name)) +
+  geom_line() +
+  geom_hline(yintercept = 0) +
+  scale_y_continuous(name="% change", labels=scales::percent) +
+  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
+  scale_colour_manual(values=colors) +
+  ggtitle("Two kinds of revenue volatility: pure cyclical and pure random shocks",
+          subtitle="All 3 revenue series raise the same amount over 30 years") +
+  theme_report +
+  nolegend_title
+p2
+ggsave(filename = here::here("results", "trend_cycle_random_pch.png"), plot = p2, width=8, height=6)
+
+```
+
+The two-panel graph below shows actual revenue minus trend revenue for each source. 
+
++   Which revenue source has greater year-to-year variation and might be more difficult to forecast?
++   Which revenue source would subject the state to long periods of shortfalls and might suggest a larger rainy day fund? How easily can we tell that when we are comparing actual growth rates to trend growth rates?
+
+
+```{r include=TRUE, eval=TRUE, fig.width=6, fig.height=9}
+
+p_forecast <- grid.arrange(p_cycle_vsgrowth,
+                      p_random_vsgrowth, 
+             nrow = 2, top="Two kinds of volatility, difference from growth rate in trend revenue")
+grid::grid.draw(p_forecast)
+
+ggsave(filename = here::here("results", "dev_pch.png"), plot = p_forecast, width=8, height=12)
+
+
+```
+
+## Formal measures of volatility
+
+```{r functions, include=FALSE, eval=TRUE}
+hp_df <- function(df, vname, smooth=NULL){
+  vts <- ts(df[vname])
+  vts_hp <- hpfilter(vts, freq=smooth, type=c("lambda"), drift=FALSE)
+  df %>% 
+    mutate(trend=as.numeric(vts_hp$trend),
+           cycle=as.numeric(vts_hp$cycle))
+}
+
+hptrend <- function(vec, smooth=NULL){
+  vts_hp <- hpfilter(ts(vec), freq=smooth, type=c("lambda"), drift=FALSE)
+  as.numeric(vts_hp$trend)
+}
+
+hpdf <- function(data) {
+  mod <- hpfilter(data$value, freq=6.25, type=c("lambda"), drift=FALSE)
+  tibble(trend=as.numeric(mod$trend),
+         cycle=as.numeric(mod$cycle))
+}
+
+
+sredf <- function(data) {
+  # short-run elasticity
+  mod = lm(dlvalue ~ dlgdp, data=data)
+  list(mod=mod, coeff=unname(mod$coefficients["dlgdp"]))
+}
+
+
+dl <- function(vec) {
+  # change in log
+  # ASSUME data are sorted by year and there are no gaps and no zeros
+  lvec = log(vec)
+  laglvec = c(NA, head(lvec, -1))
+  lvec - laglvec
+}
+
+```
 
 
 ```{r vcalc}
-df <- taxkeep %>%
-  arrange(name, year) %>%
-  nest_by(name) %>%
-  filter(year >= 1960, stabbr=="US")
-
-# %>% mutate(new=hp_df(., "value"))
-
-taxkeep %>%
-  filter(year >= 1960, stabbr=="US") %>%
-  arrange(name, year) %>%
-  group_by(name) %>%
-  mutate(hp=hpfilter(value, freq=1200, type=c("lambda"), drift=FALSE))
-
-vec <- df %>% filter(name=="tottax") %>% arrange(year) %>% .$value
-res <- hpfilter(vec, freq=1200, type=c("lambda"), drift=FALSE)
-str(res)
-typeof(res)
-res$trend[, 1]
-
-
+# df <- censustax %>%
+#   arrange(name, year) %>%
+#   nest_by(name) %>%
+#   filter(year >= 1960, stabbr=="US")
+# 
+# # %>% mutate(new=hp_df(., "value"))
+# 
+# censustax %>%
+#   filter(year >= 1960, stabbr=="US") %>%
+#   arrange(name, year) %>%
+#   group_by(name) %>%
+#   mutate(hp=hpfilter(value, freq=1200, type=c("lambda"), drift=FALSE))
+# 
+# vec <- df %>% filter(name=="tottax") %>% arrange(year) %>% .$value
+# res <- hpfilter(vec, freq=1200, type=c("lambda"), drift=FALSE)
+# str(res)
+# typeof(res)
+# res$trend[, 1]
 
 
-df2 <- taxkeep %>%
+# sredf <- function(data) {
+#   # short-run elasticity
+#   mod = lm(dlvalue ~ dlgdp, data=data)
+#   list(mod=mod, coeff=unname(mod$coefficients["dlgdp"]))
+# }
+
+
+
+df2 <- censustax %>%
   left_join(sgdpfy %>%
               filter(name=="gdp") %>%
               rename(gdp=value) %>%
@@ -464,23 +544,75 @@ df2 <- taxkeep %>%
          pch_rollsd = rollsd(pch, 10),
          dlvalue=dl(value),
          dlgdp=dl(gdp)) %>%
-  filter(year >= 1964) %>%
+  filter(year >= 1964) %>%  # !(stabbr =="OH" & name=="cit")
   ungroup %>%
   group_nest(stabbr, name) %>%
-  mutate(hpf=map(data, hpdf),
-         sre=map(data, srddf))
-
-# Problem with `mutate()` column `dlvalue`.
-# ℹ `dlvalue = dl(value)`.
-# ℹ NaNs produced
-# ℹ The warning occurred in group 224: stabbr = "OH", name = "cit". 
+  mutate(hpf=map(data, safely(hpdf)),
+         sre=map(data, safely(sredf)))
 
 
-sredf <- function(data) {
-  # short-run elasticity
-  mod = lm(dlvalue ~ dlgdp, data=data)
-  list(mod=mod, coeff=unname(mod$coefficients["dlgdp"]))
-}
+df2 %>%
+  hoist(sre, coeff=c("result", "coeff"))  # reach within result to get coeff
+
+tmp <- df2 %>%
+  filter(stabbr=="NY", name=="iit")
+str(tmp$sre)
+str(tmp$sre[[1]])
+names(tmp$sre[[1]]$result)
+
+coef(tmp$sre[[1]])
+
+tmp$sre[[1]]
+names(tmp$sre[[1]])
+names(tmp$sre[[1]]$result)
+names(tmp$sre[[1]]$result$coeff)
+
+tmp %>%
+  select(stabbr, name, sre) %>%
+  unnest(cols = c(sre))
+
+tmp %>%
+  hoist(sre, coeff=list("result", 1))
+
+tmp %>%
+  hoist(sre, coeff=c("result", "coeff"))
+
+
+tmp %>%
+  hoist(sre, "result", "mod", "coefficients", "dlgdp")
+
+tmp %>%
+  unnest_wider(sre) %>%
+  unnest_wider(result)
+
+
+
+tmp %>%
+  select(stabbr, name, hpf) %>%
+  unnest(cols = c(hpf))
+
+
+
+tmp %>%
+  ungroup %>%
+  hoist(sre,
+        mod="mod")
+
+
+tmp %>%
+  ungroup %>%
+  hoist(sre,
+        # mod="mod",
+        coeff="coeff")
+
+
+names(tmp2$sre[[1]])
+tmp2 %>%
+  ungroup %>%
+  hoist(sre,
+        # mod="mod",
+        coeff="coeff")
+
 
 tmp <- df2 %>%
   filter(stabbr=="NY", name=="iit", year >= 1965) %>%
@@ -498,13 +630,13 @@ unname(mod$coefficients["dlgdp"])
 str(coef(mod))
 
 
-names(belchers$info[[1]])
-belchers %>% hoist(info,
-  name = "name",
-  age = "age",
-  dad = "father",
-  firstborn = list("children", 1L)
-)
+# names(belchers$info[[1]])
+# belchers %>% hoist(info,
+#   name = "name",
+#   age = "age",
+#   dad = "father",
+#   firstborn = list("children", 1L)
+# )
 
 names(tmp2$sre[[1]])
 tmp2 %>%
@@ -614,12 +746,12 @@ df3 %>%
 
 
 # Capital gains
-```{r}
+```{r eval=TRUE}
 # % change in gdp, tax revenue, cg
-df <- gdpfy %>%
+cgtax <- gdpfy %>%
   full_join(capgains,
             by="year") %>%
-  full_join(taxkeep %>%
+  full_join(censustax %>%
               filter(name %in% c("tottax", "iit", "gst")) %>%
               rename(tax=value),
             by="year") %>%
@@ -636,7 +768,7 @@ df <- gdpfy %>%
 
 
 ```{r gdpcgtax_plot}
-df %>%
+cgtax %>%
   filter(stabbr=="US") %>%
   select(year, gdp_pch, cg_pch, tax_pch) %>%
   pivot_longer(-year) %>%
@@ -650,16 +782,16 @@ df %>%
 ```
 
 
-```{r cggdp_plot, fig.height=6, fig.width=6}
+```{r cggdp_plot, eval=TRUE, include=TRUE, fig.height=6, fig.width=6}
 # fix to use calendar year??
 rec <- recessions %>%
   filter(rec_year > 1953)
 
-anno <- df %>%
+anno <- cgtax %>%
   filter(stabbr=="US") %>%
   mutate(cggdp=cggdp / 100)
 
-p <- df %>%
+p <- cgtax %>%
   filter(stabbr=="US") %>%
   select(year, cggdp) %>%
   ggplot(aes(year, cggdp / 100)) +
@@ -700,7 +832,7 @@ ggsave(filename = here::here("results", "cggdp_us.png"), plot = p, width=8, heig
 
 # Construct Seegert volatility measure
 ```{r}
-df <- taxkeep %>%
+df <- censustax %>%
   filter(stabbr=="US", name=="tottax", year >= 1959) %>%
   select(year, tax=value) %>%
   left_join(gdpfy, by="year") %>% # nominal gdp
@@ -1490,7 +1622,7 @@ cov3 <- tmp %>%
 
 
 
-# Older stuff below here
+# Earlier notes
 
 
 

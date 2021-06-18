@@ -124,6 +124,7 @@ source(here::here("r", "libs_base.r"))
 source(here::here("r", "libs_ts.r"))
 source(here::here("r", "functions.r"))
 devtools::session_info()
+
 # devtools::package_info()
 
 ```
@@ -370,7 +371,7 @@ mtables <- count(tmp, tabname)
 # see spreadsheet for further details on sources
 fn <- "NationalCapitalGains.xlsx"
 sheet <- "CapGains"
-capgains <- read_excel(here::here("data", fn), sheet=sheet, range="A5:B83", 
+capgains <- read_excel(here::here("raw_data", fn), sheet=sheet, range="A5:B83", 
                        col_types = c())
 capgains <- capgains %>%
   mutate(year=as.integer(year),
@@ -380,8 +381,6 @@ glimpse(capgains)
 ```
 
 
-    
-    
 ```{r save_econ_national}
 save(gdpfy, gdppi, recessions, capgains, file = here::here("data", "econ_national.RData"))
 
@@ -635,15 +634,11 @@ taxkeep <- anomalies_v3 %>%
   ungroup
 summary(taxkeep)
 glimpse(taxkeep)
-# saveRDS(taxkeep, here::here("data", "taxkeep.rds"))
+census_clean_tax <- taxkeep
+saveRDS(census_clean_tax, here::here("data", "details", "census_clean_tax.rds"))
 
 ```
 
-
-```{r save_taxdata}
-save(taxkeep, file=here::here("data", "taxdata.RData"))
-
-```
 
 ## Pew data on enacted revenue changes
 
@@ -655,10 +650,44 @@ save(taxkeep, file=here::here("data", "taxdata.RData"))
   <p>Volatility scores for each state’s total tax revenue and specific tax sources were calculated using the U.S. Census Bureau’s State Government Tax Collections historical data series for 1994 to 2014, accessed April 21, 2015. Data were adjusted to control for the effects of tax policy change using the National Conference of State Legislatures (NCSL) State Tax Action reports for 1994 to 2013, accessed in January 2015.</p>
 </blockquote>
 
+Note that in these data, adjusted = raw - polichy
+They include separate tabs for total and for major. The majors are:
+
+
+   `Major Revenue Source`               n
+   <chr>                            <int>
+ 1 Amusements                           9
+ 2 Corporation                          9
+ 3 Corporation net income              90
+ 4 Documentary and stock transfer       6
+ 5 General sales and gross receipts   135
+ 6 Individual income                  123
+ 7 Motor fuels                         99
+ 8 Motor vehicle                       12
+ 9 Occupation and business, NEC         6
+10 Property taxes                      27
+11 Public utilities                     9
+12 Severance                           27
+13 Tobacco products                     3
+14 Total                              153
+
+The numbers are percent changes only. There are no levels.
+There are no US totals for the individual majors.
+
+Pew_1995_2014_2015-10-08(Boyd Data Request 100815).xlsx  has the policy adjustments, no US totals for major taxes
+
+Pew_2000_2019_2020-10-13(RevenueVolatilityData).xlsx, and
+Pew_1998_2017_2018-08-29(RevenueVolatilityData).xlsx
+
+have the annual volatility score (I think this is policy adjusted growth) by state and major tax. Does not have policy adjustments separately.
+
 
 ```{r ONETIME_pew_revenue_data, eval=FALSE}
 # data file Boyd Data Request 100815.xlsx
-xlfn <- here::here("data", "Boyd Data Request 100815.xlsx")
+# fnames <- c("", "", "")
+
+
+xlfn <- here::here("raw_data", "pew", "Boyd Data Request 100815.xlsx")
 sheets <- excel_sheets(xlfn)
 sheets
 
@@ -708,7 +737,9 @@ Tobacco products; cigtax
 Total; tottax", 
 delim=";", trim_ws = TRUE)
 
-pewlong <- pewdf %>%
+type_map
+
+pewtax <- pewdf %>%
   select(stname=1, revsource=2, everything()) %>%
   left_join(bdata::stcodes %>% select(stabbr, stname), by="stname") %>%
   left_join(type_map, by="revsource") %>%
@@ -718,16 +749,27 @@ pewlong <- pewdf %>%
   select(stabbr, stname, sheet, vartype, revsource, taxtype, year, value) %>%
   arrange(stabbr, vartype, taxtype, year)
   
-glimpse(pewlong)
+glimpse(pewtax)
 
 # caution: US data do not have major taxes, just the total
-count(pewlong, stabbr, stname)
+count(pewtax, stabbr, stname)
 
-pewlong %>% filter(stabbr=="US")
-saveRDS(pewlong, here::here("data", "pewlong.rds"))
+pewtax %>% filter(stabbr=="US")
+saveRDS(pewtax, here::here("data", "details", "pewtax.rds"))
 
 ```
 
+## assemble and save taxdata
+
+```{r save_taxdata}
+censustax <- readRDS(here::here("data", "details", "census_clean_tax.rds"))
+pewtax <- readRDS(here::here("data", "details", "pewtax.rds"))
+save(censustax, pewtax, file=here::here("data", "taxdata.RData"))
+
+```
+
+
+### more below her3e
 
 ```{r vol_measures}
 # hp_df <- function(df, vname){
