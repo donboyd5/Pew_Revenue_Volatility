@@ -8,6 +8,13 @@ ma <- function(x, period) {
 }
 
 
+stname <- function(stabbr) {
+  stabbrs <- c(state.abb, "DC", "US")
+  stnames <- c(state.name, "District of Columbia", "United States")
+  stnames[match(stabbr, stabbrs)]
+}
+
+
 # date-related functions ----
 qtodate <- function(yq){
   year <- str_sub(yq, 1, 4)

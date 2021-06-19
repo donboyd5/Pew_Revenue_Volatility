@@ -752,6 +752,7 @@ pewtax <- pewdf %>%
 glimpse(pewtax)
 
 # caution: US data do not have major taxes, just the total
+count(pewtax, year)
 count(pewtax, stabbr, stname)
 
 pewtax %>% filter(stabbr=="US")

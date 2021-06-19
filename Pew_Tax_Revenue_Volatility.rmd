@@ -300,9 +300,8 @@ All three revenue series raise the same amount of money over 30 years.
 
 For each of the following graphs, ask:
 
-+   Which revenue source would require a **larger rainy day fund** if a state wanted to protect against long downturns?
-+   Which revenue source would be **harder to forecast** if the state were focused on avoiding unanticipated budgfet shortfalls?
-
++   Which form of volatility would require a **larger rainy day fund** if a state wanted to protect against long downturns?
++   Which form of volatility would make revenue **harder to forecast** and could be a concern if the state is focused on avoiding unanticipated budget shortfalls?
 
 
 ```{r eval=TRUE}
@@ -362,9 +361,9 @@ p_random_vsgrowth <- fpdiff("tnoise") + ggtitle("Shock: random\nMeasure: shock %
 ```
 
 
-### Comparing AMOUNT (level) of revenue relative to trend
+## Comparing **level** (amount) of actual revenue to trend revenue
 
-We begin by comparing actual revenue to trend revenue. 
+We begin by comparing the level (amount) of actual revenue to trend revenue. 
 
 
 ```{r eval=TRUE, include=TRUE}
@@ -393,14 +392,14 @@ ggsave(filename = here::here("results", "trend_cycle_random_level.png"), plot = 
 ```
 
 
-The two-panel graph below shows actual revenue minus trend revenue for each source. 
+The two-panel graph below shows the *level* of actual revenue minus trend revenue for each source -- that is, it measure deviation from trend. 
 
 +   Which of the two kinds of volatility would subject the state to long periods of shortfalls and might suggest the need for a larger rainy day fund?
-+   Which revenue source has greater year-to-year variation and might be more difficult to forecast? How easily can we tell that if we compare to the trend?
++   Which form of volatility has greater year-to-year variation and might be more difficult to forecast? How easily can we tell that if we compare to the trend?
 
 In the graph, cyclical volatility subjects the state to long consecutive periods of underperformance and overperformance, suggesting the need for a larger rainy day fund. The deviation-from-trend measure makes this clear.
 
-It's not clear from the graph which form of cyclicality subjects the state to greater year-to-year uncertainty: the deviation-from-trend measure does not tell us much about this.
+It's not clear from the graph which form of volatility subjects the state to greater year-to-year uncertainty: the deviation-from-trend measure does not tell us much about this.
 
 
 ```{r include=TRUE, eval=TRUE, fig.width=6, fig.height=9}
@@ -416,10 +415,11 @@ ggsave(filename = here::here("results", "dev_trend.png"), plot = p_rdf, width=8,
 ```
 
 
-## Comparing revenue GROWTH RATES relative to trend growth rates 
+## Comparing revenue **growth rates** relative to trend growth rates 
 
-Next we compare growth rates of actual revenue to growth rates for trend revenue. 
+The graph below shows the year-to-year growth rates of these revenue sources.
 
+The next two-panel graph compares *growth rates* of actual revenue to growth rates for trend revenue, instead of comparing the *level* of actual revenue to trend revenue. It measures the deviation in the growth rate from the trend growth rate.
 
 
 ```{r eval=TRUE, include=TRUE}
@@ -444,10 +444,14 @@ ggsave(filename = here::here("results", "trend_cycle_random_pch.png"), plot = p2
 
 ```
 
-The two-panel graph below shows actual revenue minus trend revenue for each source. 
+The two-panel graph below shows actual revenue growth minus trend revenue growth for each source. 
 
 +   Which revenue source has greater year-to-year variation and might be more difficult to forecast?
 +   Which revenue source would subject the state to long periods of shortfalls and might suggest a larger rainy day fund? How easily can we tell that when we are comparing actual growth rates to trend growth rates?
+
+In the graph, cyclical volatility subjects the state to long consecutive periods of underperformance and overperformance, suggesting the need for a larger rainy day fund. The deviation-from-trend measure makes this clear.
+
+It's not clear from the graph which form of cyclicality subjects the state to greater year-to-year uncertainty: the deviation-from-trend measure does not tell us much about this.
 
 
 ```{r include=TRUE, eval=TRUE, fig.width=6, fig.height=9}
@@ -466,6 +470,7 @@ ggsave(filename = here::here("results", "dev_pch.png"), plot = p_forecast, width
 
 ```{r functions, include=FALSE, eval=TRUE}
 hp_df <- function(df, vname, smooth=NULL){
+  # return data frame with trend, cycle added as new variables
   vts <- ts(df[vname])
   vts_hp <- hpfilter(vts, freq=smooth, type=c("lambda"), drift=FALSE)
   df %>% 
@@ -739,6 +744,236 @@ df3 %>%
   geom_line() +
   geom_hline(yintercept = 0) +
   facet_wrap(~name, ncol=3, scales="free")
+
+
+```
+
+
+# Impact of policy changes
+
+It is better, conceptually, to adjust for policy changes. But how much difference does it make?
+
+```{r}
+glimpse(pewtax)
+count(pewtax, year) # 1995-2014
+count(pewtax, taxtype) # 14, including cit, gst, iit, mft, tottax
+count(pewtax, vartype) # adjusted, policy, raw
+# value is percent change, nominal
+summary(pewtax)
+
+# construct total tax measures for each state, raw and adjusted
+df <- pewtax %>%
+  filter(vartype %in% c("raw", "adjusted"), taxtype=="tottax") %>%
+  select(stabbr, year, vartype, value)
+
+
+
+```
+
+
+## Exploratory look at the impact of adjusting for policy changes
+
+### Percent change in adjusted and unadjusted revenue, selected states
+```{r eval=TRUE, include=TRUE, fig.width=8, fig.height=8}
+# data(package="bdata")
+#    beargn  beargn.name          n
+#    <chr>   <chr>            <int>
+#  1 ""      ""                   2
+#  2 "fwr"   "Far West"           6
+#  3 "glr"   "Great Lakes"        5
+#  4 "mdatl" "Mid Atlantic"       6
+#  5 "neng"  "New England"        6
+#  6 "plr"   "Plains"             7
+#  7 "rmr"   "Rocky Mountain"     5
+#  8 "ser"   "Southeast"         12
+#  9 "swr"   "Southwest"          4
+# 10 "usr"   "United States"      1
+# find the state with the largest tax revenue in each region, by type of tax
+
+states_ranked <- censustax %>%
+  filter(year==2019, stabbr %in% state.abb) %>%
+  left_join(stcodes %>% select(stabbr, beargn, beargn.name)) %>%
+  group_by(name, beargn) %>%
+  arrange(desc(value)) %>%
+  mutate(rank=row_number()) %>%
+  ungroup
+
+f <- function(tax, taxlabel){
+  p <- pewtax %>%
+        filter(taxtype==tax) %>%
+        select(stabbr, vartype, year, value) %>%
+        left_join(states_ranked %>%
+        filter(name==tax) %>%
+        select(stabbr, beargn.name, rank), by="stabbr") %>%
+        group_by(beargn.name) %>%
+        filter(rank==min(rank)) %>%
+        ungroup %>%
+        mutate(vartype=factor(vartype, 
+                              levels=c("raw", "adjusted", "policy"),
+                              labels=c("actual", "adjusted", "policy change")),
+               stname=stname(stabbr),
+               stregion=paste0(beargn.name, ": ", stname)) %>%
+        arrange(beargn.name, vartype) %>%
+        ggplot(aes(year, value, colour=vartype)) +
+        geom_point() +
+        geom_line() +
+        scale_colour_manual(values=colors) +
+        scale_y_continuous(name="% change", breaks=seq(-1, 1, .05),
+                           labels=scales::percent_format(accuracy = 1), limits=c(NA, NA)) +
+        scale_x_continuous(name=NULL, breaks=seq(1950, 2030, 5)) +
+        geom_hline(aes(yintercept=0)) +
+        facet_wrap(~stregion, ncol=2, scales="free_y") +
+        ggtitle(paste0(taxlabel, " revenue: Percent change in actual versus policy-adjusted revenue"),
+                subtitle="Largest state in each region with data for this revenue source") +
+        labs(caption="Source: Data provided by Pew Charitable Trusts") +
+        theme_report +
+        nolegend_title
+    
+        ggsave(filename = here::here("results", paste0("policy_", tax, "_selstates.png")), 
+               plot = p, 
+               width=8, height=8)
+        p
+}
+
+colors <- c("blue", "red", "grey")
+
+f("tottax", "Total tax")
+f("iit", "Individual income tax")
+f("gst", "General sales tax")
+f("cit", "Corporate income tax")
+# f("mft", "Motor fuel tax")
+  
+
+```
+
+
+
+## Specific volatility measures, with and without policy changes
+```{r}
+# construct levels from the pewtax data
+# pewtax
+df <- pewtax %>%
+  filter(vartype %in% c("raw", "adjusted")) %>%
+  select(stabbr, year, vartype, taxtype, pch=value) %>%
+  group_by(stabbr, vartype, taxtype) %>%
+  arrange(year) %>%
+  mutate(value=cumprod(1 + pch) / (1 + pch[1])) %>%
+  ungroup
+df
+
+df %>% filter(stabbr=="NY", taxtype=="tottax", vartype=="raw")
+
+
+df2 <- df %>%
+  left_join(sgdpfy %>%
+              filter(name=="gdp") %>%
+              rename(gdp=value) %>%
+              select(year, stabbr, gdp),
+            by=c("stabbr", "year")) %>%
+  arrange(stabbr, taxtype, vartype, year) %>% 
+  group_by(stabbr, taxtype, vartype) %>%
+  mutate(pch=value / value[match(year - 1, year)] * 100 - 100,
+         pch_rollsd = rollsd(pch, 10),
+         dlvalue=dl(value),
+         dlgdp=dl(gdp)) %>%
+  filter(year >= 1964) %>%  # !(stabbr =="OH" & name=="cit")
+  ungroup %>%
+  group_nest(stabbr, taxtype, vartype) %>%
+  mutate(hpf=map(data, safely(hpdf)),
+         sre=map(data, safely(sredf)))
+
+ df2 %>%
+   select(stabbr, taxtype, vartype, data) %>%
+   unnest(data) %>%
+   group_by(stabbr, taxtype, vartype) %>%
+   summarise(pchsd=sd(pch, na.rm=TRUE), .groups="drop") %>%
+   pivot_wider(names_from = vartype, values_from = pchsd) %>%
+   filter(taxtype %in% txs) %>%
+   ggplot(aes(x=raw, y=adjusted, label=stabbr)) +
+   geom_point(colour="blue", size=0.5) +
+   geom_text(colour="blue", size=2) +
+   geom_abline(slope=1) +
+        nolegend_title +
+   facet_wrap(~taxtype, ncol=2, scales = "free") +
+   theme_report
+ 
+ 
+ changes <- df2 %>%
+   select(stabbr, taxtype, vartype, data) %>%
+   unnest(data) %>%
+   group_by(stabbr, taxtype, vartype) %>%
+   summarise(pchsd=sd(pch, na.rm=TRUE), .groups="drop") %>%
+   pivot_wider(names_from = vartype, values_from = pchsd) %>%
+   mutate(change=adjusted - raw)
+ 
+ changes %>%
+   group_by(taxtype) %>%
+   summarise(n=n(),
+             raw=median(raw, na.rm=TRUE),
+             adjusted=median(adjusted, na.rm=TRUE),
+             change=median(change, na.rm=TRUE)) %>%
+   filter(n > 9) %>%
+   arrange(desc(change))
+ 
+ 
+ #  hoist(data, coeff=c("result", "coeff"))
+
+sredf <- df2 %>%
+  hoist(sre, coeff=c("result", "coeff")) %>% # reach within result to get coeff
+  select(stabbr, taxtype, vartype, coeff) %>%
+  group_by(taxtype, vartype) %>%
+  arrange(desc(coeff)) %>%
+  mutate(srank=row_number()) %>%
+  ungroup
+
+count(sredf, taxtype)
+
+txs <- c("tottax", "iit", "gst", "mft", "cit", "proptax")
+txs <- c("tottax", "iit", "gst", "cit")
+
+sredf %>%
+  select(-srank) %>%
+  pivot_wider(names_from = vartype, values_from = coeff) %>%
+  # filter(taxtype=="tottax") %>%
+  filter(taxtype %in% txs) %>%
+  ggplot(aes(x=raw, y=adjusted, label=stabbr)) +
+  geom_point(colour="blue", size=0.5) +
+  geom_text(colour="blue", size=2) +
+  geom_abline(slope=1) +
+        nolegend_title +
+  facet_wrap(~taxtype, ncol=2, scales = "free") +
+  theme_report
+
+txs <- c("tottax", "iit", "gst", "mft", "cit", "proptax")
+txs <- c("tottax", "iit", "gst", "cit")
+sredf %>%
+  select(-coeff) %>%
+  pivot_wider(names_from = vartype, values_from = srank) %>%
+  filter(taxtype %in% txs) %>%
+  ggplot(aes(x=raw, y=adjusted, label=stabbr)) +
+  geom_point(colour="blue", size=0.5) +
+  geom_text(colour="blue", size=2) +
+  geom_abline(slope=1) +
+        nolegend_title +
+  scale_y_reverse() +
+  scale_x_reverse() +
+  facet_wrap(~taxtype, ncol=2, scales = "free") +
+  theme_report
+    
+# ggsave(filename = here::here("results", paste0("policy_", tax, "_scatter.png")), 
+#        plot = p, 
+#        width=8, height=8)
+
+sredf %>%
+  pivot_wider(names_from = vartype, values_from = coeff)
+
+# which state had the largest change in volatility??
+txs <- c("tottax", "iit", "gst", "mft", "cit", "proptax", "sevtax")
+txs <- c("tottax", "iit", "gst", "cit", "sevtax")
+changes %>%
+  filter(taxtype %in% txs) %>%
+  arrange(desc(abs(change))) %>%
+  filter(row_number() < 15)
 
 
 ```
@@ -1182,95 +1417,6 @@ measures <- tax_stack %>%
 #   nest() %>%
 
 ```
-
-
-
-## Pew data on enacted revenue changes
-
-*   Pew constructed estimates of the percent change in major taxes, by year, state, and major tax type for work it did in ___
-*   In a 10/8/2015 email, on my request Brenna Erford <BErford@pewtrusts.org> provided the file "Boyd Data Request 100815.xlsx" to me (donald.boyd@rockinst.suny.edu), which had data underlying the project
-*   Pew's short description of the data, in the "Cover" tab of the workbook, was:
-    
-<blockquote style="color:grey;font-size:100%;margin-left: 4em">
-  <p>Volatility scores for each state’s total tax revenue and specific tax sources were calculated using the U.S. Census Bureau’s State Government Tax Collections historical data series for 1994 to 2014, accessed April 21, 2015. Data were adjusted to control for the effects of tax policy change using the National Conference of State Legislatures (NCSL) State Tax Action reports for 1994 to 2013, accessed in January 2015.</p>
-</blockquote>
-
-
-```{r ONETIME_pew_revenue_data, eval=FALSE}
-# data file Boyd Data Request 100815.xlsx
-xlfn <- here::here("data", "Boyd Data Request 100815.xlsx")
-sheets <- excel_sheets(xlfn)
-sheets
-
-get_pewsheet <- function(sheet){
-  print(sheet)
-  range <- ifelse(str_detect(sheet, "Major"), "A5:V190", "A5:V56")
-  read_excel(xlfn, sheet=sheet, range=range) %>%
-    mutate(sheet=sheet)
-}
-
-pewdf <- map_dfr(sheets[-1], get_pewsheet)
-glimpse(pewdf)
-count(pewdf, sheet)
-count(pewdf, `Major Revenue Source`)
-
-#    `Major Revenue Source`               n
-#    <chr>                            <int>
-#  1 Amusements                           9
-#  2 Corporation                          9
-#  3 Corporation net income              90
-#  4 Documentary and stock transfer       6
-#  5 General sales and gross receipts   135
-#  6 Individual income                  123
-#  7 Motor fuels                         99
-#  8 Motor vehicle                       12
-#  9 Occupation and business, NEC         6
-# 10 Property taxes                      27
-# 11 Public utilities                     9
-# 12 Severance                           27
-# 13 Tobacco products                     3
-# 14 Total                              153
-
-type_map <- read_delim("revsource; taxtype
-Amusements; amusetax
-Corporation; corptax
-Corporation net income; cit
-Documentary and stock transfer; doctax
-General sales and gross receipts; gst
-Individual income; iit
-Motor fuels; mft
-Motor vehicle; mvl
-Occupation and business, NEC; occtax
-Property taxes; proptax
-Public utilities; utiltax
-Severance; sevtax
-Tobacco products; cigtax
-Total; tottax", 
-delim=";", trim_ws = TRUE)
-
-pewlong <- pewdf %>%
-  select(stname=1, revsource=2, everything()) %>%
-  left_join(bdata::stcodes %>% select(stabbr, stname), by="stname") %>%
-  left_join(type_map, by="revsource") %>%
-  mutate(vartype=word(sheet, 3)) %>%
-  pivot_longer(-c(stabbr, stname, revsource, sheet, vartype, taxtype), names_to = "year") %>%
-  mutate(year=as.integer(year)) %>%
-  select(stabbr, stname, sheet, vartype, revsource, taxtype, year, value) %>%
-  arrange(stabbr, vartype, taxtype, year)
-  
-glimpse(pewlong)
-
-# caution: US data do not have major taxes, just the total
-count(pewlong, stabbr, stname)
-
-pewlong %>% filter(stabbr=="US")
-saveRDS(pewlong, here::here("data", "pewlong.rds"))
-
-
-```
-
-
-
 
 
 ```{r vol_measures}
