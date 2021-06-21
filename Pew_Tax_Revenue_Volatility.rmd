@@ -15,7 +15,7 @@ output:
     toc_depth: '3'
     df_print: paged
 editor_options:
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 <!-- <style> -->
@@ -126,6 +126,54 @@ devtools::session_info()
 ```
 
 
+```{r functions, include=FALSE, eval=TRUE}
+hp_df <- function(df, vname, smooth=NULL){
+  # return data frame with trend, cycle added as new variables
+  vts <- ts(df[vname])
+  vts_hp <- hpfilter(vts, freq=smooth, type=c("lambda"), drift=FALSE)
+  df %>% 
+    mutate(trend=as.numeric(vts_hp$trend),
+           cycle=as.numeric(vts_hp$cycle))
+}
+
+hptrend <- function(vec, smooth=NULL){
+  vts_hp <- hpfilter(ts(vec), freq=smooth, type=c("lambda"), drift=FALSE)
+  as.numeric(vts_hp$trend)
+}
+
+hpdf <- function(data, colname="value") {
+  mod <- hpfilter(data[colname], freq=6.25, type=c("lambda"), drift=FALSE)
+  tibble(trend=as.numeric(mod$trend),
+         cycle=as.numeric(mod$cycle))
+}
+
+
+sre <- function(data) {
+  # short-run elasticity
+  mod = lm(dlvalue ~ dlgdp, data=data)
+  list(mod=mod, coeff=unname(mod$coefficients["dlgdp"]))
+}
+
+
+sre_gsp <- function(data) {
+  # short-run elasticity
+  mod = lm(dlvalue ~ dlgdp + glgsp, data=data)
+  list(mod=mod, coeff=unname(mod$coefficients["dlgdp"]))
+}
+
+dl <- function(vec) {
+  # change in log
+  # ASSUME data are sorted by year and there are no gaps and no zeros
+  lvec = log(vec)
+  laglvec = c(NA, head(lvec, -1))
+  lvec - laglvec
+}
+
+```
+
+
+
+
 # Materials for report, organized by topic
 
 ## Get previously created data
@@ -134,6 +182,10 @@ load(file = here::here("data", "general.RData"), verbose=TRUE)
 load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
 load(file = here::here("data", "econ_state.RData"), verbose=TRUE)
 load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
+
+# slim data files down if desired
+pewtax  <- pewtax %>%
+  select(stabbr, year, taxtype, vartype, pch, level)
 
 ```
 
@@ -468,45 +520,6 @@ ggsave(filename = here::here("results", "dev_pch.png"), plot = p_forecast, width
 
 ## Formal measures of volatility
 
-```{r functions, include=FALSE, eval=TRUE}
-hp_df <- function(df, vname, smooth=NULL){
-  # return data frame with trend, cycle added as new variables
-  vts <- ts(df[vname])
-  vts_hp <- hpfilter(vts, freq=smooth, type=c("lambda"), drift=FALSE)
-  df %>% 
-    mutate(trend=as.numeric(vts_hp$trend),
-           cycle=as.numeric(vts_hp$cycle))
-}
-
-hptrend <- function(vec, smooth=NULL){
-  vts_hp <- hpfilter(ts(vec), freq=smooth, type=c("lambda"), drift=FALSE)
-  as.numeric(vts_hp$trend)
-}
-
-hpdf <- function(data) {
-  mod <- hpfilter(data$value, freq=6.25, type=c("lambda"), drift=FALSE)
-  tibble(trend=as.numeric(mod$trend),
-         cycle=as.numeric(mod$cycle))
-}
-
-
-sredf <- function(data) {
-  # short-run elasticity
-  mod = lm(dlvalue ~ dlgdp, data=data)
-  list(mod=mod, coeff=unname(mod$coefficients["dlgdp"]))
-}
-
-
-dl <- function(vec) {
-  # change in log
-  # ASSUME data are sorted by year and there are no gaps and no zeros
-  lvec = log(vec)
-  laglvec = c(NA, head(lvec, -1))
-  lvec - laglvec
-}
-
-```
-
 
 ```{r vcalc}
 # df <- censustax %>%
@@ -761,10 +774,6 @@ count(pewtax, vartype) # adjusted, policy, raw
 # value is percent change, nominal
 summary(pewtax)
 
-# construct total tax measures for each state, raw and adjusted
-df <- pewtax %>%
-  filter(vartype %in% c("raw", "adjusted"), taxtype=="tottax") %>%
-  select(stabbr, year, vartype, value)
 
 
 
@@ -801,7 +810,7 @@ states_ranked <- censustax %>%
 f <- function(tax, taxlabel){
   p <- pewtax %>%
         filter(taxtype==tax) %>%
-        select(stabbr, vartype, year, value) %>%
+        select(stabbr, vartype, year, pch) %>%
         left_join(states_ranked %>%
         filter(name==tax) %>%
         select(stabbr, beargn.name, rank), by="stabbr") %>%
@@ -814,7 +823,7 @@ f <- function(tax, taxlabel){
                stname=stname(stabbr),
                stregion=paste0(beargn.name, ": ", stname)) %>%
         arrange(beargn.name, vartype) %>%
-        ggplot(aes(year, value, colour=vartype)) +
+        ggplot(aes(year, pch, colour=vartype)) +
         geom_point() +
         geom_line() +
         scale_colour_manual(values=colors) +
@@ -837,6 +846,7 @@ f <- function(tax, taxlabel){
 
 colors <- c("blue", "red", "grey")
 
+
 f("tottax", "Total tax")
 f("iit", "Individual income tax")
 f("gst", "General sales tax")
@@ -847,24 +857,17 @@ f("cit", "Corporate income tax")
 ```
 
 
-
 ## Specific volatility measures, with and without policy changes
 ```{r}
 # construct levels from the pewtax data
 # pewtax
-df <- pewtax %>%
-  filter(vartype %in% c("raw", "adjusted")) %>%
-  select(stabbr, year, vartype, taxtype, pch=value) %>%
-  group_by(stabbr, vartype, taxtype) %>%
-  arrange(year) %>%
-  mutate(value=cumprod(1 + pch) / (1 + pch[1])) %>%
-  ungroup
-df
 
-df %>% filter(stabbr=="NY", taxtype=="tottax", vartype=="raw")
+pewtax %>% filter(stabbr=="NY", taxtype=="tottax", vartype=="raw")
 
 
-df2 <- df %>%
+# construct volatility measures for each state, raw and adjusted
+vol <- pewtax %>%
+  filter(vartype != "policy") %>%
   left_join(sgdpfy %>%
               filter(name=="gdp") %>%
               rename(gdp=value) %>%
@@ -872,17 +875,32 @@ df2 <- df %>%
             by=c("stabbr", "year")) %>%
   arrange(stabbr, taxtype, vartype, year) %>% 
   group_by(stabbr, taxtype, vartype) %>%
-  mutate(pch=value / value[match(year - 1, year)] * 100 - 100,
-         pch_rollsd = rollsd(pch, 10),
-         dlvalue=dl(value),
+  mutate(pch=pch * 100,
+         dlvalue=dl(level),
          dlgdp=dl(gdp)) %>%
-  filter(year >= 1964) %>%  # !(stabbr =="OH" & name=="cit")
   ungroup %>%
   group_nest(stabbr, taxtype, vartype) %>%
-  mutate(hpf=map(data, safely(hpdf)),
+  mutate(hpf=map2(data, "level", safely(hpdf)),
          sre=map(data, safely(sredf)))
+glimpse(vol)
 
- df2 %>%
+
+# analyze several measures
+vol2 <- vol %>%
+  hoist(data,
+        year="year",
+        level="level",
+        pch="pch") %>%
+  select(-data) %>%
+  hoist(hpf, trend=c("result", "trend")) %>%
+  select(-hpf) %>%
+  unnest(cols=c(year, level, pch, trend))
+
+
+txs <- c("tottax", "iit", "gst", "mft", "cit", "proptax")
+txs <- c("tottax", "iit", "gst", "cit")
+
+ vol %>%
    select(stabbr, taxtype, vartype, data) %>%
    unnest(data) %>%
    group_by(stabbr, taxtype, vartype) %>%
@@ -896,6 +914,101 @@ df2 <- df %>%
         nolegend_title +
    facet_wrap(~taxtype, ncol=2, scales = "free") +
    theme_report
+ 
+
+glimpse(vol2) 
+vmeasures <-  vol2 %>%
+  mutate(pdtrend=level / trend * 100 - 100) %>%
+  group_by(stabbr, taxtype, vartype) %>%
+  summarise(pchsd=sd(pch, na.rm=TRUE),
+            pdtrendsd=sd(pdtrend, na.rm=TRUE),
+            sre=first(sre),
+            .groups="drop") %>%
+  hoist(sre, sre_coeff=c("result", "coeff")) %>%
+  select(-sre)%>%
+  pivot_longer(-c(stabbr, taxtype, vartype), names_to = "measure") %>%
+  group_by(taxtype, vartype, measure) %>%
+  arrange(value) %>%
+  mutate(rank=row_number())
+
+
+txs <- c("tottax", "iit", "gst", "cit")
+vranks <- vmeasures %>%
+  filter(taxtype %in% txs) %>%
+  select(-value) %>%
+  pivot_wider(names_from = vartype,
+              values_from = rank)
+count(vranks, measure)
+  
+
+vranks %>%
+  group_by(taxtype, measure) %>%
+  summarise(cval=cor(raw, adjusted,
+                     use="pairwise.complete.obs", method="spearman")) %>%
+  pivot_wider(names_from = measure, values_from = cval)
+
+
+
+vranks %>%
+  filter(taxtype=="tottax", measure=="pdtrendsd") %>%
+  ungroup %>%
+  select(raw, adjusted) %>%
+  correlate()
+
+
+
+Orange %>% 
+  group_by(Tree) %>%
+  summarize(correlation = cor(age, circumference))
+ 
+# library(corrr)
+# d %>% 
+#   correlate() %>% 
+#   focus(mpg:drat, mirror = TRUE) %>% 
+#   network_plot()
+ 
+#  
+# df3 <-  df2 %>%
+#   # select(-sre) %>%
+#   unnest_wider(hpf) %>%
+#   unnest_wider(result) %>%
+#   unnest(c(data, trend)) %>%
+#   select(stabbr, taxtype, vartype, year, value, pch, trend, sre) %>%
+#   mutate(pdtrend=value / trend * 100 - 100) 
+
+df4 <- df3 %>%
+  pivot_wider(names_from = vartype, values_from = pdtrend) %>%
+  mutate(change = adjusted - raw)
+
+changes <- df3 %>%
+  group_by(stabbr, taxtype, vartype) %>%
+  summarise(pchsd=sd(pch, na.rm=TRUE),
+            pdtrendsd=sd(pdtrend, na.rm=TRUE), .groups="drop")
+
+changes %>%
+  select(-pchsd) %>%
+  pivot_wider(names_from = vartype, values_from = pdtrendsd) %>%
+  mutate(change=adjusted - raw) %>%
+  arrange(-abs(change))
+
+ 
+df3 %>%
+   group_by(taxtype) %>%
+   summarise(n=n(),
+             raw=median(raw, na.rm=TRUE),
+             adjusted=median(adjusted, na.rm=TRUE),
+             change=median(change, na.rm=TRUE)) %>%
+   filter(n > 9) %>%
+   arrange(desc(change))
+
+df2 %>%
+  filter(stabbr=="NY", taxtype=="tottax") %>%
+  arrange(year)
+
+df3 %>%
+  filter(stabbr=="NY", taxtype=="tottax") %>%
+  arrange(year)
+  
  
  
  changes <- df2 %>%

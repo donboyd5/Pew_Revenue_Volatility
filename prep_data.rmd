@@ -739,17 +739,43 @@ delim=";", trim_ws = TRUE)
 
 type_map
 
-pewtax <- pewdf %>%
+pewtax_base <- pewdf %>%
   select(stname=1, revsource=2, everything()) %>%
   left_join(bdata::stcodes %>% select(stabbr, stname), by="stname") %>%
   left_join(type_map, by="revsource") %>%
   mutate(vartype=word(sheet, 3)) %>%
-  pivot_longer(-c(stabbr, stname, revsource, sheet, vartype, taxtype), names_to = "year") %>%
+  pivot_longer(-c(stabbr, stname, revsource, sheet, vartype, taxtype), names_to = "year", values_to = "pch") %>%
   mutate(year=as.integer(year)) %>%
-  select(stabbr, stname, sheet, vartype, revsource, taxtype, year, value) %>%
+  select(stabbr, stname, sheet, vartype, revsource, taxtype, year, pch) %>%
   arrange(stabbr, vartype, taxtype, year)
   
-glimpse(pewtax)
+glimpse(pewtax_base)
+
+levels <- pewtax_base %>%
+  filter(vartype %in% c("raw", "adjusted")) %>%
+  group_by(stabbr, vartype, taxtype) %>%
+  arrange(year) %>%
+  do(add_row(.,
+             stabbr=.$stabbr[1], 
+             stname=.$stname[1],
+             sheet=.$sheet[1],
+             vartype=.$vartype[1], 
+             revsource=.$revsource[1],
+             taxtype=.$taxtype[1],
+             year=1994, 
+             pch=0,
+             .before=0)) %>%
+  mutate(level=cumprod(1 + pch),
+         pch=ifelse(year==1994, NA_real_, pch)) %>%
+  ungroup
+
+levels %>% 
+  filter(stabbr=="NY", taxtype=="tottax")
+
+pewtax <- pewtax_base %>%
+  full_join(levels %>% select(-pch), 
+            by = c("stabbr", "stname", "sheet", "vartype", "revsource", "taxtype", "year")) %>%
+  arrange(stabbr, vartype, taxtype, year)
 
 # caution: US data do not have major taxes, just the total
 count(pewtax, year)
