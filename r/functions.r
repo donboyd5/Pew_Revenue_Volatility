@@ -84,6 +84,12 @@ gband <- function(xmin, xmax, fill="grey", alpha=.5, ymin=-Inf, ymax=Inf) {
 }
 
 
+recdata <- function(year){
+  # return a recessions data frame with receission years >= rec_year
+  recessions[recessions$rec_year >= year, ]
+}
+
+
 rfy <- function(ryear, pt="peak"){
   if(pt=="peak") rec2$fypeak[match(ryear, rec2$year)] else
     rec2$fytrough[match(ryear, rec2$year)]

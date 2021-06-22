@@ -126,25 +126,28 @@ devtools::session_info()
 ```
 
 
+
+# additional functions
 ```{r functions, include=FALSE, eval=TRUE}
-hp_df <- function(df, vname, smooth=NULL){
-  # return data frame with trend, cycle added as new variables
-  vts <- ts(df[vname])
-  vts_hp <- hpfilter(vts, freq=smooth, type=c("lambda"), drift=FALSE)
-  df %>% 
-    mutate(trend=as.numeric(vts_hp$trend),
-           cycle=as.numeric(vts_hp$cycle))
+dl <- function(vec) {
+  # change in log
+  # ASSUME data are sorted by year and there are no gaps and no zeros
+  lvec = log(vec)
+  laglvec = c(NA, head(lvec, -1))
+  lvec - laglvec
 }
 
-hptrend <- function(vec, smooth=NULL){
-  vts_hp <- hpfilter(ts(vec), freq=smooth, type=c("lambda"), drift=FALSE)
-  as.numeric(vts_hp$trend)
-}
 
 hpdf <- function(data, colname="value") {
   mod <- hpfilter(data[colname], freq=6.25, type=c("lambda"), drift=FALSE)
   tibble(trend=as.numeric(mod$trend),
          cycle=as.numeric(mod$cycle))
+}
+
+
+hptrend <- function(vec, smooth=NULL){
+  vts_hp <- hpfilter(ts(vec), freq=smooth, type=c("lambda"), drift=FALSE)
+  as.numeric(vts_hp$trend)
 }
 
 
@@ -157,37 +160,14 @@ sre <- function(data) {
 
 sre_gsp <- function(data) {
   # short-run elasticity
-  mod = lm(dlvalue ~ dlgdp + glgsp, data=data)
+  mod = lm(dlvalue ~ dlgdp + dlgsp, data=data)
   list(mod=mod, coeff=unname(mod$coefficients["dlgdp"]))
 }
 
-dl <- function(vec) {
-  # change in log
-  # ASSUME data are sorted by year and there are no gaps and no zeros
-  lvec = log(vec)
-  laglvec = c(NA, head(lvec, -1))
-  lvec - laglvec
-}
 
 ```
 
 
-
-
-# Materials for report, organized by topic
-
-## Get previously created data
-```{r get_data, include=FALSE, eval=TRUE}
-load(file = here::here("data", "general.RData"), verbose=TRUE)
-load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
-load(file = here::here("data", "econ_state.RData"), verbose=TRUE)
-load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
-
-# slim data files down if desired
-pewtax  <- pewtax %>%
-  select(stabbr, year, taxtype, vartype, pch, level)
-
-```
 
 
 ## Constants, themes, etc.
@@ -208,27 +188,78 @@ color2 <- c("blue", "red")
 ```
 
 
+# Materials for report, organized by topic
+
+
+
+## Get previously created data
+```{r get_data, include=FALSE, eval=TRUE}
+load(file = here::here("data", "general.RData"), verbose=TRUE)
+load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
+load(file = here::here("data", "econ_state.RData"), verbose=TRUE)
+load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
+
+# slim data files down if desired
+pewtax  <- pewtax %>%
+  select(stabbr, year, taxtype, vartype, pch, level)
+
+```
+
+
 # Scene setting - exploration of patterns
 
 ## Year over year change in tax revenue and...
 
 ### Nominal GDP
 
+```{r eval=TRUE, include=TRUE}
+df <- censustax %>%
+  filter(stabbr=="US", name=="tottax") %>%
+  select(year, tax=value) %>%
+  inner_join(gdpfy, by="year") %>%
+  pivot_longer(-year) %>%
+  group_by(name) %>%
+  mutate(pch=pchya(value, year)) %>%
+  ungroup
+
+
+recs <- recdata(1953)
+
+p <- df %>%
+  # filter(year >= 1970) %>%
+  ggplot(aes(year, pch, colour=name)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(name=NULL, breaks=seq(1950, 2030, 5)) +
+  scale_y_continuous(name="% change",
+                     breaks=seq(-20, 20, 2)) +
+  scale_color_manual(values=bluered) +
+  gband(recs$peak_decimal, recs$trough_decimal) +
+  ggtitle("State Government Tax Revenue and Gross Domestic Product, United States") +
+  theme_report +
+  nolegend_title
+p 
+ggsave(filename = here::here("results", "gdp_tax_us.png"), plot = p, width=8, height=6)
+
+
+```
+
+
 
 ### Inflation
 ```{r include=FALSE, eval=TRUE}
 
 glimpse(censustax)
- df <- censustax %>%
-   filter(stabbr=="US", name=="tottax") %>%
-   select(year, tax=value) %>%
-   inner_join(gdppi %>% select(year, gdppi), by="year") %>%
-   pivot_longer(-year) %>%
-   group_by(name) %>%
-   mutate(pch=pchya(value, year)) %>%
-   ungroup
+df <- censustax %>%
+  filter(stabbr=="US", name=="tottax") %>%
+  select(year, tax=value) %>%
+  inner_join(gdppi %>% select(year, gdppi), by="year") %>%
+  pivot_longer(-year) %>%
+  group_by(name) %>%
+  mutate(pch=pchya(value, year)) %>%
+  ungroup
  
-
 p <- df %>%
   filter(year >= 1955) %>%
   mutate(name=factor(name, levels=c("tax", "gdppi"), labels=c("taxes", "inflation"))) %>%
@@ -244,7 +275,7 @@ p <- df %>%
   theme_report +
   nolegend_title
 p 
-ggsave(filename = here::here("results", "gpppi_tax_us.png"), plot = p, width=8, height=6)
+ggsave(filename = here::here("results", "gdppi_tax_us.png"), plot = p, width=8, height=6)
  
 
 # df2 %>%
@@ -268,7 +299,7 @@ ggsave(filename = here::here("results", "gpppi_tax_us.png"), plot = p, width=8, 
 # Alternative volatility measures
 
 
-```{r include=FALSE, eval=TRUE}
+```{r eval=TRUE}
 # generate series with two kinds of volatility
 nyears <- 30
 base <- 100
@@ -566,7 +597,7 @@ df2 <- censustax %>%
   ungroup %>%
   group_nest(stabbr, name) %>%
   mutate(hpf=map(data, safely(hpdf)),
-         sre=map(data, safely(sredf)))
+         sre=map(data, safely(sre)))
 
 
 df2 %>%
