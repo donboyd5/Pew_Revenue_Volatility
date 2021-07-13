@@ -1,3 +1,50 @@
+library(Hmisc)
+
+mat <- replicate(52, rnorm(100))
+str(mat)
+# add some NAs
+mat[sample(length(mat), 2000)] <- NA
+# also column names
+colnames(mat) <- c(LETTERS, letters)
+
+rc <- rcorr(mat)
+str(rc) # list: r, n P
+
+td <- tidy(rc)
+td  # tibble
+
+
+corr_tidy <- function(vars){
+  # return a tidy data frame with correlations
+  mat <- as.matrix((vars))
+  Hmisc::rcorr(mat) %>%
+    tidy
+}
+m <- measures %>%
+  select(pchsd, hpsd, sre)
+f(m)
+
+corrs <- measures %>%
+  select(-stabbr) %>%
+  group_by(taxtype) %>%
+  nest() %>%
+  summarise(map_df(data, f))
+corrs  
+  # map_dbl(data, function(df) sd(df$taxpch, na.rm=TRUE)),
+
+  measures %>%
+    group_by(taxtype) %>%
+    summarise(pch_hp=cor(pchsd, hpsd, use="pairwise.complete.obs"),
+              pch_sre=cor(pchsd, sre, use="pairwise.complete.obs"),
+              pch_srese=cor(pchsd, sre_stderr, use="pairwise.complete.obs"),
+              hp_sre=cor(hpsd, sre, use="pairwise.complete.obs"),
+              hp_srese=cor(hpsd, sre_stderr, use="pairwise.complete.obs"),
+              sre_srese=cor(sre, sre_stderr, use="pairwise.complete.obs"))
+
+
+
+test <- censustax %>%   filter((stabbr == "NY" & name == "iit"))
+
 
 install.packages("gitcreds")
 library(gitcreds)
@@ -102,8 +149,8 @@ djb4 <- djb3 %>%
   unnest_wider(result)
 
 
-djb3 %>% 
-  hoist(trend = c("result)
+# djb3 %>% 
+#   hoist(trend = c("result)
 
 djb4 %>%
   unnest_longer(trend[[1]])

@@ -129,6 +129,19 @@ devtools::session_info()
 
 # additional functions
 ```{r functions, include=FALSE, eval=TRUE}
+
+slog <- function(vec){
+  # signed logarithm
+  sign(vec)*log(abs(vec))
+}
+
+corr_tidy <- function(vars){
+  # return a tidy data frame with correlations
+  mat <- as.matrix((vars))
+  Hmisc::rcorr(mat) %>%
+    tidy
+}
+
 dl <- function(vec) {
   # change in log
   # ASSUME data are sorted by year and there are no gaps and no zeros
@@ -136,6 +149,14 @@ dl <- function(vec) {
   laglvec = c(NA, head(lvec, -1))
   lvec - laglvec
 }
+
+# dsl <- function(vec) {
+#   # change in signed log
+#   # ASSUME data are sorted by year and there are no gaps and no zeros
+#   lvec = slog(vec)
+#   laglvec = c(NA, head(lvec, -1))
+#   lvec - laglvec
+# }
 
 
 hpdf <- function(data, colname="value") {
@@ -189,7 +210,6 @@ color2 <- c("blue", "red")
 
 
 # Materials for report, organized by topic
-
 
 
 ## Get previously created data
@@ -552,245 +572,217 @@ ggsave(filename = here::here("results", "dev_pch.png"), plot = p_forecast, width
 ## Formal measures of volatility
 
 
-```{r vcalc}
-# df <- censustax %>%
-#   arrange(name, year) %>%
-#   nest_by(name) %>%
-#   filter(year >= 1960, stabbr=="US")
-# 
-# # %>% mutate(new=hp_df(., "value"))
-# 
-# censustax %>%
-#   filter(year >= 1960, stabbr=="US") %>%
-#   arrange(name, year) %>%
-#   group_by(name) %>%
-#   mutate(hp=hpfilter(value, freq=1200, type=c("lambda"), drift=FALSE))
-# 
-# vec <- df %>% filter(name=="tottax") %>% arrange(year) %>% .$value
-# res <- hpfilter(vec, freq=1200, type=c("lambda"), drift=FALSE)
-# str(res)
-# typeof(res)
-# res$trend[, 1]
+```{r vformal, eval=TRUE}
+# prepare the data
+# https://cran.r-project.org/web/packages/broom/vignettes/broom_and_dplyr.html
+# http://r4stats.com/2017/04/18/group-by-modeling-in-r-made-easy/
 
+censustax %>% 
+  filter((stabbr == "OH" & name == "cit")) %>%
+  mutate(lvalue=log(value), slvalue=slog(value),
+         dl=dl(value), dsl=dsl(value))
 
-# sredf <- function(data) {
-#   # short-run elasticity
-#   mod = lm(dlvalue ~ dlgdp, data=data)
-#   list(mod=mod, coeff=unname(mod$coefficients["dlgdp"]))
-# }
-
-
-
-df2 <- censustax %>%
+vbase <- censustax %>%
+  filter(!(stabbr == "DE" & name == "gst")) %>% # only 3 obs, 1951-53
+  filter(!(stabbr == "OH" & name == "cit")) %>% # negative in 2014
+  rename(taxtype=name, tax=value) %>%
+  left_join(gdpfy, by="year") %>%
   left_join(sgdpfy %>%
               filter(name=="gdp") %>%
-              rename(gdp=value) %>%
-              select(year, stabbr, gdp),
+              rename(sgdp=value) %>%
+              select(year, stabbr, sgdp),
             by=c("stabbr", "year")) %>%
-  arrange(stabbr, name, year) %>% 
-  group_by(stabbr, name) %>%
-  mutate(pch=value / value[match(year - 1, year)] * 100 - 100,
-         pch_rollsd = rollsd(pch, 10),
-         dlvalue=dl(value),
-         dlgdp=dl(gdp)) %>%
-  filter(year >= 1964) %>%  # !(stabbr =="OH" & name=="cit")
-  ungroup %>%
-  group_nest(stabbr, name) %>%
-  mutate(hpf=map(data, safely(hpdf)),
-         sre=map(data, safely(sre)))
-
-
-df2 %>%
-  hoist(sre, coeff=c("result", "coeff"))  # reach within result to get coeff
-
-tmp <- df2 %>%
-  filter(stabbr=="NY", name=="iit")
-str(tmp$sre)
-str(tmp$sre[[1]])
-names(tmp$sre[[1]]$result)
-
-coef(tmp$sre[[1]])
-
-tmp$sre[[1]]
-names(tmp$sre[[1]])
-names(tmp$sre[[1]]$result)
-names(tmp$sre[[1]]$result$coeff)
-
-tmp %>%
-  select(stabbr, name, sre) %>%
-  unnest(cols = c(sre))
-
-tmp %>%
-  hoist(sre, coeff=list("result", 1))
-
-tmp %>%
-  hoist(sre, coeff=c("result", "coeff"))
-
-
-tmp %>%
-  hoist(sre, "result", "mod", "coefficients", "dlgdp")
-
-tmp %>%
-  unnest_wider(sre) %>%
-  unnest_wider(result)
-
-
-
-tmp %>%
-  select(stabbr, name, hpf) %>%
-  unnest(cols = c(hpf))
-
-
-
-tmp %>%
-  ungroup %>%
-  hoist(sre,
-        mod="mod")
-
-
-tmp %>%
-  ungroup %>%
-  hoist(sre,
-        # mod="mod",
-        coeff="coeff")
-
-
-names(tmp2$sre[[1]])
-tmp2 %>%
-  ungroup %>%
-  hoist(sre,
-        # mod="mod",
-        coeff="coeff")
-
-
-tmp <- df2 %>%
-  filter(stabbr=="NY", name=="iit", year >= 1965) %>%
-  nest()
-
-tmp2 <- tmp %>%
-  mutate(sre=map(data, sredf))
-tmp2$sre
-
-mod <- lm(dlvalue ~ dlgdp, data=tmp$data[[1]])
-str(mod)
-str(mod$coefficients["dlgdp"])
-mod$coefficients["dlgdp"]
-unname(mod$coefficients["dlgdp"])
-str(coef(mod))
-
-
-# names(belchers$info[[1]])
-# belchers %>% hoist(info,
-#   name = "name",
-#   age = "age",
-#   dad = "father",
-#   firstborn = list("children", 1L)
-# )
-
-names(tmp2$sre[[1]])
-tmp2 %>%
-  ungroup %>%
-  hoist(sre,
-        # mod="mod",
-        coeff="coeff")
-
-tmp2 %>%
-  unnest(sre)
-tmp2 %>%
-  unnest_wider(sre)
-
-tmp2 %>%
-  hoist(sre, "coeff")
-
-tmp2 %>%
-  unnest_wider(sre$coeff)
-
-
-df3 <- df2 %>%
-  unnest(cols = c(data, mod)) %>%
-  mutate(vol=value / trend * 100 - 100,
-         absvol=abs(vol)) %>%
-  group_by(stabbr, name) %>%
-  mutate(mdn=median(vol),
-         absmdn=median(absvol)) %>%
+  arrange(stabbr, taxtype, year) %>% 
+  group_by(stabbr, taxtype) %>%
+  mutate(taxpch=tax / tax[match(year - 1, year)] * 100 - 100,
+         dltax=dl(tax),
+         dlgdp=dl(gdp),
+         dlsgdp=dl(sgdp),
+         trend=hptrend(tax, smooth=6.25))%>%
   ungroup
 
-volsum <- df3 %>%
-  group_by(name, stabbr) %>%
-  summarise(hpmdn=median(abs(vol)),
-            hpmean=mean(abs(vol)),
-            hpsd=sd(vol),
-            pchsd=sd(pch, na.rm=TRUE),
-            .groups="drop") %>%
-  arrange(-hpmdn)
-
-volsum %>%
-  arrange(-hpmdn)
-
-volsum %>%
-  filter(stabbr=="US")
-
-volsum %>%
-  filter(name=="tottax")
-
-# dev.off()
-
-# US facet plot, one panel for each tax
-usdata <- df3 %>%
-  filter(stabbr=="US") %>%
-  group_by(stabbr, year) %>%
-  mutate(comp=vol[name=="tottax"]) %>%
-  select(stabbr, name, year, vol, comp) %>%
-  pivot_longer(cols=c(vol, comp), names_to = "type")
-
-usdata %>%
-  ggplot(aes(year, value, colour=type)) +
-  geom_point() +
-  geom_line() +
-  geom_hline(yintercept = 0) +
-  facet_wrap(~name, ncol=3, scales="free")
-
-stdata <- df3 %>%
-  group_by(name, year) %>%
-  mutate(us=vol[stabbr=="US"]) %>%
-  select(stabbr, name, year, vol, us) %>%
-  pivot_longer(cols=c(vol, us), names_to = "geo")
-
-stdata %>%
-  filter(name=="tottax") %>%
-  filter(stabbr %in% c("CA", "NY", "AL", "MS", "MA", "CT", "OH")) %>%
-  ggplot(aes(year, value, colour=geo)) +
-  geom_point() +
-  geom_line() +
-  geom_hline(yintercept = 0) +
-  facet_wrap(~stabbr, ncol=3, scales="free")
+summary(vbase)
+vbase %>% filter(!is.na(dlgdp)) %>% summary() # 1952-2019
+vbase %>% filter(!is.na(dlsgdp)) %>% summary() # 1965-2019
 
 
-sts <- c("AL", "CA", "CT", "FL", "MA", "MS", "NY", "OH","OR", "PA", "TN", "TX", "UT", "VA", "WA")
-df3 %>%
-  filter(name=="tottax") %>%
-  filter(stabbr %in% sts) %>%
-  select(stabbr, name, year, absvol, absmdn) %>%
-  pivot_longer(cols=c(absvol, absmdn), names_to = "measure") %>%
-  ggplot(aes(year, value, colour=measure)) +
-  geom_point() +
-  geom_line() +
-  geom_hline(yintercept = 0) +
-  facet_wrap(~stabbr, ncol=3, scales="free")
+vol <- vbase %>%
+  filter(year >= 1990) %>%
+  group_by(stabbr, taxtype) %>%
+  nest() %>%
+  mutate(pchsd = map_dbl(data, function(df) sd(df$taxpch, na.rm=TRUE)),
+         hpsd = map_dbl(data, function(df) sd(df$tax / df$trend * 100 - 100, na.rm=TRUE)),
+         sremod = map(data, safely(function(df) lm(dltax ~ dlgdp, data=df)))) %>%
+  ungroup
 
-sts <- c("AL", "CA", "CT", "FL", "MA", "MS", "NY", "OH","OR", "PA", "TN", "TX", "UT", "VA", "WA")
-df3 %>%
-  filter(stabbr=="US") %>%
-  select(stabbr, name, year, absvol, absmdn) %>%
-  pivot_longer(cols=c(absvol, absmdn), names_to = "measure") %>%
-  ggplot(aes(year, value, colour=measure)) +
-  geom_point() +
-  geom_line() +
-  geom_hline(yintercept = 0) +
-  facet_wrap(~name, ncol=3, scales="free")
+# unpack the summary measures from sremod
+sredf <- vol %>%
+  select(stabbr, taxtype, sremod) %>%
+  unnest_wider(col=sremod) %>%  # we need the column "result"
+  mutate(tidied=map(result, tidy)) %>%
+  unnest(cols=tidied) %>%
+  filter(term=="dlgdp") %>%
+  select(stabbr, taxtype, sre=estimate, srese=std.error)
+  
+measures <- vol %>%
+  select(stabbr, taxtype, pchsd, hpsd) %>%
+  left_join(sredf, by = c("stabbr", "taxtype"))
+
+# get all relevant correlations
+corr_types <- measures %>%
+  select(-stabbr) %>%
+  group_by(taxtype) %>%
+  nest() %>%
+  summarise(map_df(data, corr_tidy), .groups="drop")
+corr_types
+
+corr_types %>%
+  unite("pair", column1, column2) %>%
+  select(taxtype, pair, estimate) %>%
+  pivot_wider(names_from = pair, values_from = estimate)
+
+corr_states <- measures %>%
+  select(-taxtype) %>%
+  group_by(stabbr) %>%
+  nest() %>%
+  # only include columns we want in the correlation
+  summarise(map_df(data, corr_tidy), .groups="drop")
+# corr_states
 
 
 ```
+
+## How correlated are the different measures, by tax?
+```{r include=TRUE}
+
+# hpsd_pchsd	sre_pchsd	sre_hpsd	srese_pchsd	srese_hpsd	srese_sre
+vorder <- c("tottax", "iit", "gst", "cit", 
+            "selsalestax", "sevtax", "othertax")
+vlabs = c("Total taxes", 
+          "Individual income tax", "General sales tax", "Corporate income tax", 
+          "Selected sales taxes", "Severance taxes", "Other taxes")
+morder <- c("hpsd_pchsd", "sre_pchsd", "sre_hpsd",
+            "srese_sre", "srese_hpsd", "srese_pchsd")
+
+tabdata <- corr_types %>%
+  unite("pair", column1, column2) %>%
+  select(taxtype, pair, estimate) %>%
+  mutate(taxtype=factor(taxtype, levels=vorder, labels=vlabs),
+         pair=factor(pair, levels=morder)) %>%
+  arrange(taxtype, pair) %>%
+  pivot_wider(names_from = pair, values_from = estimate)
+shade_rows <- seq(2, nrow(tabdata), 2)
+
+markers <- tabdata %>%
+    select(stabbr) %>%
+    mutate(rownum=row_number()) %>%
+    group_by(stabbr) %>%
+    mutate(shade=ifelse(row_number() %in% seq(2, nrow(.), 2),
+                        TRUE, FALSE)) %>%
+    ungroup
+
+  shade_rows <- markers$rownum[markers$shade]
+
+tabdata %>%
+  gt() %>%
+    tab_header(
+      title = "Correlation of selected volatility measures by tax type",
+      subtitle = "Estimated over 1990-2018"
+      ) %>%
+      cols_label(taxtype="Type of tax",
+                 hpsd_pchsd=html("Percent change<br>-- with --<br>Deviation from trend"),
+                 sre_pchsd=html("Percent change<br>-- with --<br>Short-run elasticity (SRE)"),
+                 sre_hpsd=html("Deviation from trend<br>-- with --<br>Short-run elasticity (SRE)"),
+                 srese_sre=html("Short-run elasticity (SRE)<br>-- with --<br>Standard error of SRE"),
+                 srese_pchsd=html("Percent change<br>-- with --<br>Standard error of SRE"),
+                 srese_hpsd=html("Deviation from trend<br>-- with --<br>Standard error of SRE")) %>%
+      cols_align(
+        align = c("left"),
+        columns = taxtype) %>%
+      fmt_number(
+        columns = contains("_"),
+        decimals = 3) %>%
+    tab_style(
+      style = list(
+        cell_fill(color = "lightgrey")
+      ),
+      locations = cells_body(
+        rows=shade_rows
+      )
+    )
+	
+# data2 %>%
+#     select(-stabbr) %>%
+#     group_by(stname) %>%
+#     gt() %>%
+#     tab_header(
+#       title = ttitle,
+#       subtitle = "New York and the nation"
+#       ) %>%
+#     cols_label(stname="",
+#                varname="",
+#                pch="% change") %>%
+#     fmt_currency(
+#       columns = c("2017", "2018", "change"),
+#       decimals = 0,
+#       accounting = TRUE,
+#       suffixing = FALSE
+#     ) %>%
+#       fmt_percent(
+#       columns = c("pch"),
+#       decimals = 1
+#     ) %>%
+#     fmt_missing(
+#       columns = c("2017", "2018", "change", "pch"),
+#       missing_text = "n.m."
+#     ) %>%
+#     tab_style(
+#       style = list(
+#         cell_fill(color = "#f7f7f7")
+#       ),
+#       locations = cells_body(
+#         rows=shade_rows
+#       )
+#     ) %>%
+#     cols_align(align = c("left"), columns = c("stname", "varname")) %>%
+#     tab_options(row_group.background.color = "lightgreen") %>%
+#     tab_footnote(
+#     footnote = "For NY minus US rows, % change is NY % change minus US % change",
+#     locations = cells_column_labels( 
+#       columns = vars(pch)
+#       )
+#     ) %>%
+#     tab_source_note(
+#       source_note = note
+#       )
+```
+
+
+
+
+## volatility by tax
+```{r eval=TRUE, include=TRUE}
+vranks <- vol %>%
+  filter(!(stabbr=="AK" & taxtype=="iit")) %>%
+  group_by(taxtype) %>%
+  select(stabbr, taxtype, pchsd, hpsd) %>%
+  mutate(rpchsd = rank(desc(pchsd)),
+         rhpsd = rank(desc(hpsd)))
+
+vranks %>%
+  filter(taxtype=="tottax") %>%
+  arrange(rhpsd)
+
+# ttorder <- c("tottax", "iit", "gst", "cit", "selsalestax", "sevtax", "othertax")
+# vranks %>%
+#   select(stabbr, taxtype, rhpsd) %>%
+#   mutate(taxtype=factor(taxtype, levels=ttorder)) %>%
+#   arrange(taxtype) %>%
+#   pivot_wider(names_from = taxtype, values_from = rhpsd) %>%
+#   arrange(sevtax)
+
+```
+
 
 
 # Impact of policy changes
@@ -896,6 +888,22 @@ f("cit", "Corporate income tax")
 pewtax %>% filter(stabbr=="NY", taxtype=="tottax", vartype=="raw")
 
 
+vbase <- pewtax %>%
+  filter(vartype != "policy") %>%
+  left_join(sgdpfy %>%
+              filter(name=="gdp") %>%
+              rename(sgdp=value) %>%
+              select(year, stabbr, sgdp),
+            by=c("stabbr", "year")) %>%
+  arrange(stabbr, taxtype, vartype, year) %>% 
+  group_by(stabbr, taxtype, vartype) %>%
+  mutate(pch=pch * 100,
+         dlvalue=dl(level),
+         dlsgdp=dl(sgdp),
+         trend=hptrend(level, smooth=6.25)) %>%
+  ungroup
+
+
 # construct volatility measures for each state, raw and adjusted
 vol <- pewtax %>%
   filter(vartype != "policy") %>%
@@ -912,7 +920,7 @@ vol <- pewtax %>%
   ungroup %>%
   group_nest(stabbr, taxtype, vartype) %>%
   mutate(hpf=map2(data, "level", safely(hpdf)),
-         sre=map(data, safely(sredf)))
+         sre=map(data, safely(sre)))
 glimpse(vol)
 
 
@@ -1349,10 +1357,9 @@ ggsave(filename = here::here("results", "tax_gdp_us.png"), plot = p2)
 ## Links
 
 +  [Zotero folder](https://www.zotero.org/groups/2541602/pew_tax_revenue_volatility/library)
-+  [Google sheet](https://docs.google.com/spreadsheets/d/1hSWy_7ep4RbM9lfSA-LYnDeGI1c6p9Ud0GqcSlR9xJ8/edit?usp=sharing) (barely started) to summarize important articles
 +  [Google drive folder](https://drive.google.com/drive/folders/1fM7HIP7qrKbIdndF_wQ30WxVb1j_Cq06)
-    +   Draft report: [Google docs](https://docs.google.com/document/d/13MaAnySHpE8ODvvRjraMPtR7l6GFCX_hk7qDP2KC_s8/edit?usp=sharing) is current version
-    +   OLD VERSION: Draft report is stored here (latest version has highest number in parentheses)
++  [Google sheet](https://docs.google.com/spreadsheets/d/1hSWy_7ep4RbM9lfSA-LYnDeGI1c6p9Ud0GqcSlR9xJ8/edit?usp=sharing) (same as link below)
++   Draft report: [Google docs](https://docs.google.com/document/d/13MaAnySHpE8ODvvRjraMPtR7l6GFCX_hk7qDP2KC_s8/edit?usp=sharing) is current version
 
 
 ## Goals and issues
@@ -1410,7 +1417,7 @@ Use renv.
 * organize state consumption data
 * Possibly get data from Dauchy
 * Graph pch tax vs econ
-* IRS data components income
+* IRS data components of income
 * Measures of income tax progressivity
 * Similar measures sales tax?
 * Consider base = revenue / rate as robustness check
@@ -1972,4 +1979,251 @@ p
 ```
 
 
+# Nest play area
+```{r}
+
+# how correlated are measures
+# summarize(correlation = cor(age, circumference))
+# pchsd  hpsd       sre sre_stderr
+# measures %>%
+#   group_by(taxtype) %>%
+#   summarise(pch_hp=cor(pchsd, hpsd, use="pairwise.complete.obs"),
+#             pch_sre=cor(pchsd, sre, use="pairwise.complete.obs"),
+#             pch_srese=cor(pchsd, sre_stderr, use="pairwise.complete.obs"),
+#             hp_sre=cor(hpsd, sre, use="pairwise.complete.obs"),
+#             hp_srese=cor(hpsd, sre_stderr, use="pairwise.complete.obs"),
+#             sre_srese=cor(sre, sre_stderr, use="pairwise.complete.obs"))
+
+
+# vol2 <- vol %>%
+#   mutate(temp = map(sremod, function(mod) unname(mod$result$coefficients["dlgdp"])))
+# 
+# 
+# vol2 <- vol %>%
+#   unnest_auto(sremod)
+# 
+# vol3 <- vol2 %>%
+#   tidy(result)
+# 
+# names(vol2$result[[1]])
+#   
+#   
+#   mutate(mod2 = map(sreunlist(sremod))
+# 
+# 
+# coef %>% 
+#                          as.list %>%
+#                          as_tibble)
+# 
+# vol2 %>%vol2 %>%tidy()
+#   as_tibble() %>%
+#   tidy %>% dplyr::select(term, estimate) %>% spread(term, estimate)))  %>% dplyr::select(id, model1)
+# 
+# 
+# vol2 %>%
+#   mutate(coeff=as.double(temp[[1]]))
+# 
+# d1 <- vol %>%
+#   unnest_wider(sremod)
+# names(d1$result[[1]])
+# 
+# d1 %>%
+#   hoist(result, "coefficients")
+#   unnest_auto(result)
+#   
+#   hoist(sremod, "coefficients")
+# 
+# df2 %>%
+#   
+#   hoist(sre, coeff=c("result", "coeff"))  # reach within result to get coeff
+# 
+# tmp <- df2 %>%
+#   filter(stabbr=="NY", name=="iit")
+# str(tmp$sre)
+# str(tmp$sre[[1]])
+# names(tmp$sre[[1]]$result)
+# 
+# coef(tmp$sre[[1]])
+# 
+# tmp$sre[[1]]
+# names(tmp$sre[[1]])
+# names(tmp$sre[[1]]$result)
+# names(tmp$sre[[1]]$result$coeff)
+# 
+# tmp %>%
+#   select(stabbr, name, sre) %>%
+#   unnest(cols = c(sre))
+# 
+# tmp %>%
+#   hoist(sre, coeff=list("result", 1))
+# 
+# tmp %>%
+#   hoist(sre, coeff=c("result", "coeff"))
+# 
+# 
+# tmp %>%
+#   hoist(sre, "result", "mod", "coefficients", "dlgdp")
+# 
+# tmp %>%
+#   unnest_wider(sre) %>%
+#   unnest_wider(result)
+# 
+# 
+# 
+# tmp %>%
+#   select(stabbr, name, hpf) %>%
+#   unnest(cols = c(hpf))
+# 
+# 
+# 
+# tmp %>%
+#   ungroup %>%
+#   hoist(sre,
+#         mod="mod")
+# 
+# 
+# tmp %>%
+#   ungroup %>%
+#   hoist(sre,
+#         # mod="mod",
+#         coeff="coeff")
+# 
+# 
+# names(tmp2$sre[[1]])
+# tmp2 %>%
+#   ungroup %>%
+#   hoist(sre,
+#         # mod="mod",
+#         coeff="coeff")
+# 
+# 
+# tmp <- df2 %>%
+#   filter(stabbr=="NY", name=="iit", year >= 1965) %>%
+#   nest()
+# 
+# tmp2 <- tmp %>%
+#   mutate(sre=map(data, sredf))
+# tmp2$sre
+# 
+# mod <- lm(dlvalue ~ dlgdp, data=tmp$data[[1]])
+# str(mod)
+# str(mod$coefficients["dlgdp"])
+# mod$coefficients["dlgdp"]
+# unname(mod$coefficients["dlgdp"])
+# str(coef(mod))
+# 
+# 
+# # names(belchers$info[[1]])
+# # belchers %>% hoist(info,
+# #   name = "name",
+# #   age = "age",
+# #   dad = "father",
+# #   firstborn = list("children", 1L)
+# # )
+# 
+# names(tmp2$sre[[1]])
+# tmp2 %>%
+#   ungroup %>%
+#   hoist(sre,
+#         # mod="mod",
+#         coeff="coeff")
+# 
+# tmp2 %>%
+#   unnest(sre)
+# tmp2 %>%
+#   unnest_wider(sre)
+# 
+# tmp2 %>%
+#   hoist(sre, "coeff")
+# 
+# tmp2 %>%
+#   unnest_wider(sre$coeff)
+# 
+# 
+# df3 <- df2 %>%
+#   unnest(cols = c(data, mod)) %>%
+#   mutate(vol=value / trend * 100 - 100,
+#          absvol=abs(vol)) %>%
+#   group_by(stabbr, name) %>%
+#   mutate(mdn=median(vol),
+#          absmdn=median(absvol)) %>%
+#   ungroup
+# 
+# volsum <- df3 %>%
+#   group_by(name, stabbr) %>%
+#   summarise(hpmdn=median(abs(vol)),
+#             hpmean=mean(abs(vol)),
+#             hpsd=sd(vol),
+#             pchsd=sd(pch, na.rm=TRUE),
+#             .groups="drop") %>%
+#   arrange(-hpmdn)
+# 
+# volsum %>%
+#   arrange(-hpmdn)
+# 
+# volsum %>%
+#   filter(stabbr=="US")
+# 
+# volsum %>%
+#   filter(name=="tottax")
+# 
+# # dev.off()
+# 
+# # US facet plot, one panel for each tax
+# usdata <- df3 %>%
+#   filter(stabbr=="US") %>%
+#   group_by(stabbr, year) %>%
+#   mutate(comp=vol[name=="tottax"]) %>%
+#   select(stabbr, name, year, vol, comp) %>%
+#   pivot_longer(cols=c(vol, comp), names_to = "type")
+# 
+# usdata %>%
+#   ggplot(aes(year, value, colour=type)) +
+#   geom_point() +
+#   geom_line() +
+#   geom_hline(yintercept = 0) +
+#   facet_wrap(~name, ncol=3, scales="free")
+# 
+# stdata <- df3 %>%
+#   group_by(name, year) %>%
+#   mutate(us=vol[stabbr=="US"]) %>%
+#   select(stabbr, name, year, vol, us) %>%
+#   pivot_longer(cols=c(vol, us), names_to = "geo")
+# 
+# stdata %>%
+#   filter(name=="tottax") %>%
+#   filter(stabbr %in% c("CA", "NY", "AL", "MS", "MA", "CT", "OH")) %>%
+#   ggplot(aes(year, value, colour=geo)) +
+#   geom_point() +
+#   geom_line() +
+#   geom_hline(yintercept = 0) +
+#   facet_wrap(~stabbr, ncol=3, scales="free")
+# 
+# 
+# sts <- c("AL", "CA", "CT", "FL", "MA", "MS", "NY", "OH","OR", "PA", "TN", "TX", "UT", "VA", "WA")
+# df3 %>%
+#   filter(name=="tottax") %>%
+#   filter(stabbr %in% sts) %>%
+#   select(stabbr, name, year, absvol, absmdn) %>%
+#   pivot_longer(cols=c(absvol, absmdn), names_to = "measure") %>%
+#   ggplot(aes(year, value, colour=measure)) +
+#   geom_point() +
+#   geom_line() +
+#   geom_hline(yintercept = 0) +
+#   facet_wrap(~stabbr, ncol=3, scales="free")
+# 
+# sts <- c("AL", "CA", "CT", "FL", "MA", "MS", "NY", "OH","OR", "PA", "TN", "TX", "UT", "VA", "WA")
+# df3 %>%
+#   filter(stabbr=="US") %>%
+#   select(stabbr, name, year, absvol, absmdn) %>%
+#   pivot_longer(cols=c(absvol, absmdn), names_to = "measure") %>%
+#   ggplot(aes(year, value, colour=measure)) +
+#   geom_point() +
+#   geom_line() +
+#   geom_hline(yintercept = 0) +
+#   facet_wrap(~name, ncol=3, scales="free")
+
+
+
+```
 

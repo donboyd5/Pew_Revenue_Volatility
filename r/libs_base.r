@@ -11,6 +11,8 @@ library(hms) # hms, for times
 library(lubridate) # lubridate, for date/times
 library(vctrs)
 
+library(gt)
+
 library(broom) # for automating the cleanup of complex output
 library(modelr)
 library(janitor)
