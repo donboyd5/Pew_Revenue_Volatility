@@ -1,3 +1,27 @@
+
+## rolling regression:
+## set up multivariate zoo series with
+## number of UK driver deaths and lags 1 and 12
+seat <- as.zoo(log(UKDriverDeaths))
+time(seat) <- as.yearmon(time(seat))
+seat <- merge(y = seat, y1 = lag(seat, k = -1),
+              y12 = lag(seat, k = -12), all = FALSE)
+str(seat)
+
+## run a rolling regression with a 3-year time window
+## (similar to a SARIMA(1,0,0)(1,0,0)_12 fitted by OLS)
+rr <- rollapply(seat, width = 36,
+                FUN = function(z) coef(lm(y ~ y1 + y12, data = as.data.frame(z))),
+                by.column = FALSE, align = "right")
+
+seat2 <- as.data.frame(seat)
+rr2 <- rollapply(seat2, width = 36,
+                FUN = function(z) coef(lm(y ~ y1 + y12, data = as.data.frame(z))),
+                by.column = FALSE, align = "right")
+
+rr2
+
+
 library(Hmisc)
 
 mat <- replicate(52, rnorm(100))

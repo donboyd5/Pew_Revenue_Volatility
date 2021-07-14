@@ -46,6 +46,74 @@ rmarkdown::render(rmdfn, output_format="html_document", output_file=outfn)
 ```
 
 
+# Initialization
+
+This section:
+
++   sets options
++   loads libraries
++   defines functions
++   defines constants
++   defines themes
++   retrieves previously created data
+
+It also contains some workflow notes as markdown comments.
+
+It doesn't produce any output other than some informational messages.
+
+
+<!--
+Workflow notes:
+
+# code folding:
+#   alt-L, alt-shift-L  one section
+#   alt-O, alt-shift-O  all sections
+#   ctrl-D run current code section (remapped from Ctrl-alt-T)
+
+# yaml notes:
+always_allow_html: yes
+
+  html_document:
+    toc: yes
+    toc_depth: '2'
+    df_print: paged
+    number_sections: yes
+
+# renv workflow:
+# to get it all started:
+# renv::init()
+
+# to remove it all:
+# renv::deactivate()
+# then delete the renv folder
+
+# periodically execute:
+# renv::snapshot()
+
+# to see what directory is being used by renv for local package sources, execute:
+# renv:::renv_paths_local()
+
+
+# git workflow:
+# when starting work from a different computer
+# - pull project from remote
+# git checkout -b issue-5  # create branch and checkout branch
+# Stage local changes, commit, check status:
+# git add foo.txt
+# git commit --message "A commit message"
+# git status
+
+# now merge
+# git checkout master
+# git merge issue-5
+
+# then push
+# git push
+
+-->
+
+## Preliminaries
+
 ```{r setup, include=FALSE, eval=TRUE}
 knitr::opts_chunk$set(echo=FALSE, include=FALSE, eval=FALSE, message = FALSE, warning = FALSE)
 ```
@@ -62,57 +130,6 @@ knitr::opts_chunk$set(echo=FALSE, include=FALSE, eval=FALSE, message = FALSE, wa
 ```
 
 
-<!--
-Workflow notes
-
-# code folding ----
-#   alt-L, alt-shift-L  one section
-#   alt-O, alt-shift-O  all sections
-#   ctrl-D run current code section (remapped from Ctrl-alt-T)
-
-always_allow_html: yes
-
-  html_document:
-    toc: yes
-    toc_depth: '2'
-    df_print: paged
-    number_sections: yes
-
-# further notes
-# to get it all started:
-# renv::init()
-
-# to remove it all:
-# renv::deactivate()
-# then delete the renv folder
-
-# periodically execute:
-# renv::snapshot()
-
-# to see what directory is being used by renv for local package sources, execute:
-# renv:::renv_paths_local()
-
--->
-
-
-```{r git_workflow, eval=FALSE}
-# when starting work from a different computer
-# - pull project from remote
-# git checkout -b issue-5  # create branch and checkout branch
-# Stage local changes, commit, check status:
-# git add foo.txt
-# git commit --message "A commit message"
-# git status
-
-# now merge
-# git checkout master
-# git merge issue-5
-
-# then push
-# git push
-
-```
-
 
 ```{r get_libs_and_functions, eval=TRUE}
 # clear objects from the workspace
@@ -126,14 +143,7 @@ devtools::session_info()
 ```
 
 
-
-# additional functions
-```{r functions, include=FALSE, eval=TRUE}
-
-slog <- function(vec){
-  # signed logarithm
-  sign(vec)*log(abs(vec))
-}
+```{r functions, eval=TRUE}
 
 corr_tidy <- function(vars){
   # return a tidy data frame with correlations
@@ -142,6 +152,7 @@ corr_tidy <- function(vars){
     tidy
 }
 
+
 dl <- function(vec) {
   # change in log
   # ASSUME data are sorted by year and there are no gaps and no zeros
@@ -149,14 +160,6 @@ dl <- function(vec) {
   laglvec = c(NA, head(lvec, -1))
   lvec - laglvec
 }
-
-# dsl <- function(vec) {
-#   # change in signed log
-#   # ASSUME data are sorted by year and there are no gaps and no zeros
-#   lvec = slog(vec)
-#   laglvec = c(NA, head(lvec, -1))
-#   lvec - laglvec
-# }
 
 
 hpdf <- function(data, colname="value") {
@@ -185,14 +188,18 @@ sre_gsp <- function(data) {
   list(mod=mod, coeff=unname(mod$coefficients["dlgdp"]))
 }
 
+# slog <- function(vec){
+#   # signed logarithm
+#   sign(vec)*log(abs(vec))
+# }
+
 
 ```
 
 
+```{r constants, eval=TRUE}
+# Constants, themes, etc.
 
-
-## Constants, themes, etc.
-```{r include=FALSE, eval=TRUE}
 theme_report <- theme_bw() + 
   theme(
     plot.caption = element_text(hjust = 0)
@@ -207,9 +214,6 @@ color2 <- c("blue", "red")
 
 
 ```
-
-
-# Materials for report, organized by topic
 
 
 ## Get previously created data
@@ -228,11 +232,14 @@ pewtax  <- pewtax %>%
 ```
 
 
-# Scene setting - exploration of patterns
+# Materials for report, organized by topic
 
-## Year over year change in tax revenue and...
 
-### Nominal GDP
+## Scene setting - exploration of patterns
+
+### Year over year change in tax revenue and...
+
+#### Nominal GDP
 
 ```{r eval=TRUE, include=TRUE}
 df <- censustax %>%
@@ -270,7 +277,7 @@ ggsave(filename = here::here("results", "gdp_tax_us.png"), plot = p, width=8, he
 
 
 ### Inflation
-```{r include=FALSE, eval=TRUE}
+```{r include=TRUE, eval=TRUE}
 
 glimpse(censustax)
 df <- censustax %>%
@@ -299,19 +306,6 @@ p <- df %>%
 p 
 ggsave(filename = here::here("results", "gdppi_tax_us.png"), plot = p, width=8, height=6)
  
-
-# df2 %>%
-#   filter(year >= 1970) %>%
-#   ggplot(aes(year, vol2, colour=name)) +
-#   geom_line() +
-#   geom_point() +
-#   geom_hline(yintercept = 0) +
-#   scale_x_continuous(name=NULL) +
-#   scale_y_continuous(name="volatility (% difference from smoothed trend)",
-#                      breaks=seq(-20, 20, 2)) +
-#   ggtitle("Volatility of State Government Tax Revenue and Gross Domestic Product, United States",
-#           subtitle="Volatility measured as % difference from smoothed trend (HP filter)") +
-#   theme_bw()
 
 ```
 
@@ -904,6 +898,7 @@ p + geom_polygon(color = "gray90", size = 0.1) +
 
 
 
+
 ## volatility by tax
 ```{r eval=TRUE, include=TRUE}
 vranks <- vol %>%
@@ -926,6 +921,110 @@ vranks %>%
 #   arrange(sevtax)
 
 ```
+
+# Volatility over time
+```{r include=TRUE, eval=TRUE}
+# now we want rolling versions of the volatility measures
+vperiod <- 15
+
+# vol_roll <- vbase  %>%
+#   filter(stabbr=="NY") %>%
+#   filter(year >= 1990) %>%
+#   group_by(stabbr, taxtype) %>%
+#   # nest() %>%
+#   rowwise %>%
+#   mutate(pchsd = sd(taxpch, na.rm=TRUE))
+# vol_roll
+
+vbase %>%
+  filter(stabbr=="MO", taxtype=="sevtax", year >= 1970)
+
+vbase %>%
+  filter(stabbr=="AK", taxtype=="cit", year >= 1970)
+
+vol_roll <- vbase  %>%
+  # filter(stabbr=="NY") %>%
+  filter(!(stabbr=="MO" & taxtype=="sevtax")) %>%
+  filter(year >= 1970) %>%
+  group_by(stabbr, taxtype) %>%
+  mutate(hpp=tax / trend * 100 - 100,
+         pchsd = rollsd_p(taxpch, vperiod),
+         hpsd = rollsd_p(hpp, vperiod),
+         sre=rollsre(dltax, dlgdp, vperiod))
+vol_roll
+tail(vol_roll)
+
+vol_roll %>%
+  filter(stabbr=="NY", taxtype=="tottax") %>%
+  ggplot(aes(year, sre)) +
+  geom_line()
+
+
+vol_roll %>%
+  filter(stabbr=="CT", taxtype=="tottax") %>%
+  ggplot(aes(year, sre)) +
+  geom_line()
+
+st <- "MA"
+tax <- "tottax"
+vol_roll %>%
+  select(stabbr, taxtype, year, hpsd, sre) %>%
+  filter(year >= 1985) %>%
+  filter(stabbr==st, taxtype==tax) %>%
+  pivot_longer(cols=c(hpsd, sre)) %>%
+  group_by(stabbr, taxtype, name) %>%
+  mutate(ivalue=value / value[year==2000] * 100) %>%
+  ggplot(aes(year, ivalue, colour=name)) +
+  geom_line() +
+  geom_point()
+
+
+
+
+rollsre <- function(y, x, nobs) {
+  # print("in rollsre")
+  sremod <- function(df){
+    # print("in sremod")
+    mod <- lm(y ~ x, na.action=na.exclude, data=df)
+    sre <- coef(summary(mod))[2, "Estimate"]
+    sre
+  }
+  safe_sremod <- safely(sremod)
+  # print("before df")
+  df <- data.frame(y=y, x=x)
+  # print("after df")
+  zoo::rollapply(df, nobs, function(df) sremod(as.data.frame(df)),
+                 by.column = FALSE,
+                 fill=NA, align="right")
+}
+
+rr2 <- rollapply(seat2, width = 36,
+                FUN = function(z) coef(lm(y ~ y1 + y12, data = as.data.frame(z))),
+                by.column = FALSE, align = "right")
+
+rollsd_p <- function(x, nobs) {
+  # population standard deviation
+  sdp <- function(x){
+    n <- sum(!is.na(x))
+    sd(x, na.rm=TRUE) * sqrt((n - 1) / n)
+  }
+  zoo::rollapply(x, nobs, function(x) sdp(x),
+                 fill=NA, align="right")
+}
+
+vol <- vbase %>%
+  filter(year >= 1990) %>%
+  group_by(stabbr, taxtype) %>%
+  nest() %>%
+  mutate(pchsd = map_dbl(data, function(df) sd(df$taxpch, na.rm=TRUE)),
+         hpsd = map_dbl(data, function(df) sd(df$tax / df$trend * 100 - 100, na.rm=TRUE)),
+         sremod = map(data, safely(function(df) lm(dltax ~ dlgdp, data=df))),
+         sregspmod = map(data, safely(function(df) lm(dltax ~ dlsgdp, data=df)))) %>%
+  ungroup
+
+
+```
+
 
 
 
