@@ -11,7 +11,13 @@ library(hms) # hms, for times
 library(lubridate) # lubridate, for date/times
 library(vctrs)
 
+library(maps)
 library(gt)
+
+# remotes::install_github("GuangchuangYu/ggbreak")  # not found
+# remotes::install_github("YuLab-SMU/ggbreak")  # good
+library(ggbreak) 
+library(patchwork)
 
 library(broom) # for automating the cleanup of complex output
 library(modelr)

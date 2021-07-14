@@ -219,6 +219,8 @@ load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
 load(file = here::here("data", "econ_state.RData"), verbose=TRUE)
 load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
 
+stcodes2 <- readRDS(here::here("data", "stcodes2.rds"))  # build this into bdata
+
 # slim data files down if desired
 pewtax  <- pewtax %>%
   select(stabbr, year, taxtype, vartype, pch, level)
@@ -612,7 +614,8 @@ vol <- vbase %>%
   nest() %>%
   mutate(pchsd = map_dbl(data, function(df) sd(df$taxpch, na.rm=TRUE)),
          hpsd = map_dbl(data, function(df) sd(df$tax / df$trend * 100 - 100, na.rm=TRUE)),
-         sremod = map(data, safely(function(df) lm(dltax ~ dlgdp, data=df)))) %>%
+         sremod = map(data, safely(function(df) lm(dltax ~ dlgdp, data=df))),
+         sregspmod = map(data, safely(function(df) lm(dltax ~ dlsgdp, data=df)))) %>%
   ungroup
 
 # unpack the summary measures from sremod
@@ -624,20 +627,35 @@ sredf <- vol %>%
   filter(term=="dlgdp") %>%
   select(stabbr, taxtype, sre=estimate, srese=std.error)
   
+sregspdf <- vol %>%
+  select(stabbr, taxtype, sregspmod) %>%
+  unnest_wider(col=c(sregspmod)) %>%  # we need the column "result"
+  mutate(tidied=map(result, tidy)) %>%
+  unnest(cols=tidied) %>%
+  filter(term=="dlsgdp") %>%
+  select(stabbr, taxtype, sregsp=estimate, sregspse=std.error)
+  
+tmp <- vol %>%
+  select(stabbr, taxtype, sregspmod) %>%
+  filter(row_number()==1)
+
+str(tmp$sregspmod)
+
 measures <- vol %>%
   select(stabbr, taxtype, pchsd, hpsd) %>%
-  left_join(sredf, by = c("stabbr", "taxtype"))
+  left_join(sredf, by = c("stabbr", "taxtype")) %>%
+  left_join(sregspdf, by = c("stabbr", "taxtype"))
 
 # get all relevant correlations
 corr_types <- measures %>%
   select(-stabbr) %>%
   group_by(taxtype) %>%
   nest() %>%
-  summarise(map_df(data, corr_tidy), .groups="drop")
+  summarise(map_df(data, corr_tidy), .groups="drop")  %>%
+  unite("pair", column1, column2, remove=FALSE)
 corr_types
 
 corr_types %>%
-  unite("pair", column1, column2) %>%
   select(taxtype, pair, estimate) %>%
   pivot_wider(names_from = pair, values_from = estimate)
 
@@ -646,14 +664,17 @@ corr_states <- measures %>%
   group_by(stabbr) %>%
   nest() %>%
   # only include columns we want in the correlation
-  summarise(map_df(data, corr_tidy), .groups="drop")
+  summarise(map_df(data, corr_tidy), .groups="drop") %>%
+  unite("pair", column1, column2, remove=FALSE)
 # corr_states
 
 
 ```
 
 ## How correlated are the different measures, by tax?
-```{r include=TRUE}
+
+## Correlation of the main measures
+```{r eval=TRUE, include=TRUE}
 
 # hpsd_pchsd	sre_pchsd	sre_hpsd	srese_pchsd	srese_hpsd	srese_sre
 vorder <- c("tottax", "iit", "gst", "cit", 
@@ -665,23 +686,14 @@ morder <- c("hpsd_pchsd", "sre_pchsd", "sre_hpsd",
             "srese_sre", "srese_hpsd", "srese_pchsd")
 
 tabdata <- corr_types %>%
-  unite("pair", column1, column2) %>%
+  filter(pair %in% morder) %>% 
   select(taxtype, pair, estimate) %>%
   mutate(taxtype=factor(taxtype, levels=vorder, labels=vlabs),
          pair=factor(pair, levels=morder)) %>%
   arrange(taxtype, pair) %>%
   pivot_wider(names_from = pair, values_from = estimate)
 shade_rows <- seq(2, nrow(tabdata), 2)
-
-markers <- tabdata %>%
-    select(stabbr) %>%
-    mutate(rownum=row_number()) %>%
-    group_by(stabbr) %>%
-    mutate(shade=ifelse(row_number() %in% seq(2, nrow(.), 2),
-                        TRUE, FALSE)) %>%
-    ungroup
-
-  shade_rows <- markers$rownum[markers$shade]
+names(tabdata)
 
 tabdata %>%
   gt() %>%
@@ -755,6 +767,138 @@ tabdata %>%
 #     tab_source_note(
 #       source_note = note
 #       )
+```
+
+## Correlation of volatility measures that control for national or state GDP
+```{r}
+count(corr_types, pair)
+# hpsd_pchsd	sre_pchsd	sre_hpsd	srese_pchsd	srese_hpsd	srese_sre
+vorder <- c("tottax", "iit", "gst", "cit", 
+            "selsalestax", "sevtax", "othertax")
+vlabs = c("Total taxes", 
+          "Individual income tax", "General sales tax", "Corporate income tax", 
+          "Selected sales taxes", "Severance taxes", "Other taxes")
+morder <- c("sregsp_sre", "srese_sre", "sregspse_sregsp", "sregspse_srese")
+
+
+tabdata <- corr_types %>%
+  unite("pair", column1, column2) %>%
+  filter(pair %in% morder) %>% 
+  select(taxtype, pair, estimate) %>%
+  mutate(taxtype=factor(taxtype, levels=vorder, labels=vlabs),
+         pair=factor(pair, levels=morder)) %>%
+  arrange(taxtype, pair) %>%
+  pivot_wider(names_from = pair, values_from = estimate)
+shade_rows <- seq(2, nrow(tabdata), 2)
+names(tabdata)
+
+# sregsp_sre", "srese_sre", "sregspse_sregsp", "sregspse_sre
+tabdata %>%
+  gt() %>%
+    tab_header(
+      title = "Correlation of selected volatility measures by tax type",
+      subtitle = "Estimated over 1990-2018"
+      ) %>%
+      cols_label(taxtype="Type of tax",
+                 sregsp_sre=html("Short-run elasticity (SRE)<br>-- with --<br>State-specific GDP SRE"),
+                 srese_sre=html("Short-run elasticity (SRE)<br>-- with --<br>Its standard error"),
+                 sregspse_sregsp=html("State-specific GDP SRE<br>-- with --<br>Its standard error"),
+                 sregspse_srese=html("Short-run elasticity (SRE)<br>-- with --<br>Standard error of state-specific GDP SRE")) %>%
+      cols_align(
+        align = c("left"),
+        columns = taxtype) %>%
+      fmt_number(
+        columns = contains("_"),
+        decimals = 3) %>%
+    tab_style(
+      style = list(
+        cell_fill(color = "lightgrey")
+      ),
+      locations = cells_body(
+        rows=shade_rows
+      )
+    )
+
+```
+
+
+## Scatterplots of measures
+```{r}
+# pchsd hpsd sre sregsp
+# get index by type of tax, for each state
+count(measures, stabbr)
+scatdata <- measures %>%
+  filter(stabbr != "US") %>%
+  select(-c(srese, sregspse)) %>%
+  group_by(taxtype) %>%
+  mutate(across(-c(stabbr), ~ .x / median(.x, n.rm=TRUE) * 100))
+scatdata  
+
+scatdata %>%
+  filter(taxtype=="tottax", stabbr != "AK") %>%
+  ggplot(aes(x=pchsd, y=hpsd, label=stabbr)) +
+   geom_point(colour="blue", size=0.5) +
+   geom_text(colour="blue", size=2) +
+   geom_abline(slope=1)
+
+scatdata %>%
+  filter(taxtype=="tottax", stabbr != "AK") %>%
+  ggplot(aes(x=sre, y=hpsd, label=stabbr)) +
+   geom_point(colour="blue", size=0.5) +
+   geom_text(colour="blue", size=2) +
+   geom_abline(slope=1)
+
+scatdata %>%
+  filter(taxtype=="tottax", stabbr != "AK") %>%
+  ggplot(aes(x=sre, y=sregsp, label=stabbr)) +
+   geom_point(colour="blue", size=0.5) +
+   geom_text(colour="blue", size=2) +
+   geom_abline(slope=1)
+
+scatdata %>%
+  filter(taxtype=="tottax", stabbr != "AK") %>%
+  ggplot(aes(x=sregsp, y=hpsd, label=stabbr)) +
+   geom_point(colour="blue", size=0.5) +
+   geom_text(colour="blue", size=2) +
+   geom_abline(slope=1)
+  
+
+ # vol %>%
+ #   select(stabbr, taxtype, vartype, data) %>%
+ #   unnest(data) %>%
+ #   group_by(stabbr, taxtype, vartype) %>%
+ #   summarise(pchsd=sd(pch, na.rm=TRUE), .groups="drop") %>%
+ #   pivot_wider(names_from = vartype, values_from = pchsd) %>%
+ #   filter(taxtype %in% txs) %>%
+ #   ggplot(aes(x=raw, y=adjusted, label=stabbr)) +
+ #   geom_point(colour="blue", size=0.5) +
+ #   geom_text(colour="blue", size=2) +
+ #   geom_abline(slope=1) +
+ #        nolegend_title +
+ #   facet_wrap(~taxtype, ncol=2, scales = "free") +
+ #   theme_report
+
+
+```
+
+
+## State maps of volatility
+```{r eval=TRUE, include=TRUE}
+us_states <- map_data("state")
+
+count(us_states, region)  # 49, including DC!
+
+head(us_states)
+p <- ggplot(data = us_states,
+            mapping = aes(x = long, y = lat,
+                          group = group, fill = region))
+
+p + geom_polygon(color = "gray90", size = 0.1) +
+    coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+    guides(fill = FALSE)
+
+
+
 ```
 
 
