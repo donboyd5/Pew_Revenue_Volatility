@@ -1,4 +1,6 @@
 
+gitcreds::gitcreds_set()
+
 ## rolling regression:
 ## set up multivariate zoo series with
 ## number of UK driver deaths and lags 1 and 12

@@ -15,7 +15,7 @@ output:
     toc_depth: '3'
     df_print: paged
 editor_options:
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 <!-- <style> -->
@@ -46,7 +46,7 @@ rmarkdown::render(rmdfn, output_format="html_document", output_file=outfn)
 ```
 
 
-# Initialization
+# Preparation
 
 This section:
 
@@ -56,6 +56,7 @@ This section:
 +   defines constants
 +   defines themes
 +   retrieves previously created data
++   creates some derived data files
 
 It also contains some workflow notes as markdown comments.
 
@@ -188,10 +189,24 @@ sre_gsp <- function(data) {
   list(mod=mod, coeff=unname(mod$coefficients["dlgdp"]))
 }
 
-# slog <- function(vec){
-#   # signed logarithm
-#   sign(vec)*log(abs(vec))
-# }
+
+rollsre <- function(y, x, nobs) {
+  # print("in rollsre")
+  sremod <- function(df){
+    # print("in sremod")
+    mod <- lm(y ~ x, na.action=na.exclude, data=df)
+    sre <- coef(summary(mod))[2, "Estimate"]
+    sre
+  }
+  safe_sremod <- safely(sremod)
+  # print("before df")
+  df <- data.frame(y=y, x=x)
+  # print("after df")
+  zoo::rollapply(df, nobs, function(df) sremod(as.data.frame(df)),
+                 by.column = FALSE,
+                 fill=NA, align="right")
+}
+
 
 
 ```
@@ -225,11 +240,34 @@ load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
 
 stcodes2 <- readRDS(here::here("data", "stcodes2.rds"))  # build this into bdata
 
+
+```
+
+
+```{r}
 # slim data files down if desired
 pewtax  <- pewtax %>%
   select(stabbr, year, taxtype, vartype, pch, level)
 
+# get tax shares
+taxshares <- censustax %>%
+  pivot_wider(values_fill=0) %>%
+  mutate(across(-c(stabbr, year, tottax), ~ .x / tottax))
+
+# do a quick check to make sure the shares add approximately to 1
+# sharesums <- taxshares %>%
+#   select(-tottax) %>%
+#   pivot_longer(-c(stabbr, year)) %>%
+#   group_by(stabbr, year) %>%
+#   summarise(sum=sum(value), .groups="drop")
+# all.equal(sharesums$sum, rep(1, nrow(sharesums)))  # checks whether the sums==1, within a tolerance
+# quantile(sharesums$sum)
+# sharesums %>% filter(sum < .99)  # we have 19 that are < .99; CO 2019 is the only concerning one
+# rm(sharesums)
+
+
 ```
+
 
 
 # Materials for report, organized by topic
@@ -276,7 +314,7 @@ ggsave(filename = here::here("results", "gdp_tax_us.png"), plot = p, width=8, he
 
 
 
-### Inflation
+#### Inflation
 ```{r include=TRUE, eval=TRUE}
 
 glimpse(censustax)
@@ -310,10 +348,7 @@ ggsave(filename = here::here("results", "gdppi_tax_us.png"), plot = p, width=8, 
 ```
 
 
-
-
 # Alternative volatility measures
-
 
 ```{r eval=TRUE}
 # generate series with two kinds of volatility
@@ -565,18 +600,35 @@ ggsave(filename = here::here("results", "dev_pch.png"), plot = p_forecast, width
 
 ```
 
+## To come
+
+[Reserve fund example with real data for the two different volatility measures.]
+
 ## Formal measures of volatility
 
+In his section we compute summary volatility measures by state and tax. We summarize them over the last approximately 30 years (1990-2018) as follows:
 
-```{r vformal, eval=TRUE}
+*   Measures of total volatility (NOT controlling for the economy):
+    +   annual % change: standard deviation of percent change over the 30 years
+    +   % deviation from trend: standard deviation of the % difference
+    
+*   Measures that control for the economy:
+    +   national economy: coefficient on a model that estimates the log-difference in tax revenue as a function of the log-difference in national GDP (a la Sobel and Holcombe)
+    +   state economy: coefficient from the same kind of model, with log-difference in state GDP on the RHS instead of national GDP
+    +   uncertainty of the national model: the standard error of the coefficient on the national model; if the standard error is large, then national GDP alone is not a good predictor of state tax revenue and thus there is a lot of other variation (volatility) besides that captured by the economic measure
+
+
+
+```{r vol_formal, eval=TRUE}
 # prepare the data
+
 # https://cran.r-project.org/web/packages/broom/vignettes/broom_and_dplyr.html
 # http://r4stats.com/2017/04/18/group-by-modeling-in-r-made-easy/
 
-censustax %>% 
-  filter((stabbr == "OH" & name == "cit")) %>%
-  mutate(lvalue=log(value), slvalue=slog(value),
-         dl=dl(value), dsl=dsl(value))
+# censustax %>% 
+#   filter((stabbr == "OH" & name == "cit")) %>%
+#   mutate(lvalue=log(value), slvalue=slog(value),
+#          dl=dl(value), dsl=dsl(value))
 
 vbase <- censustax %>%
   filter(!(stabbr == "DE" & name == "gst")) %>% # only 3 obs, 1951-53
@@ -601,39 +653,34 @@ summary(vbase)
 vbase %>% filter(!is.na(dlgdp)) %>% summary() # 1952-2019
 vbase %>% filter(!is.na(dlsgdp)) %>% summary() # 1965-2019
 
-
 vol <- vbase %>%
   filter(year >= 1990) %>%
   group_by(stabbr, taxtype) %>%
   nest() %>%
   mutate(pchsd = map_dbl(data, function(df) sd(df$taxpch, na.rm=TRUE)),
          hpsd = map_dbl(data, function(df) sd(df$tax / df$trend * 100 - 100, na.rm=TRUE)),
-         sremod = map(data, safely(function(df) lm(dltax ~ dlgdp, data=df))),
-         sregspmod = map(data, safely(function(df) lm(dltax ~ dlsgdp, data=df)))) %>%
+         sremod = purrr::map(data, safely(function(df) lm(dltax ~ dlgdp, data=df))),
+         sregspmod = purrr::map(data, safely(function(df) lm(dltax ~ dlsgdp, data=df)))) %>%
   ungroup
+vol
 
-# unpack the summary measures from sremod
+# unpack the summary measures from sremod to get coefficient (short-run elasticity, sre) and its standard error
 sredf <- vol %>%
   select(stabbr, taxtype, sremod) %>%
   unnest_wider(col=sremod) %>%  # we need the column "result"
-  mutate(tidied=map(result, tidy)) %>%
+  mutate(tidied=purrr::map(result, tidy)) %>%
   unnest(cols=tidied) %>%
   filter(term=="dlgdp") %>%
   select(stabbr, taxtype, sre=estimate, srese=std.error)
-  
+
+# unpack the summary measures from sregspmod to get coefficient (short-run elasticity, sre) and its standard error
 sregspdf <- vol %>%
   select(stabbr, taxtype, sregspmod) %>%
   unnest_wider(col=c(sregspmod)) %>%  # we need the column "result"
-  mutate(tidied=map(result, tidy)) %>%
+  mutate(tidied=purrr::map(result, tidy)) %>%
   unnest(cols=tidied) %>%
   filter(term=="dlsgdp") %>%
   select(stabbr, taxtype, sregsp=estimate, sregspse=std.error)
-  
-tmp <- vol %>%
-  select(stabbr, taxtype, sregspmod) %>%
-  filter(row_number()==1)
-
-str(tmp$sregspmod)
 
 measures <- vol %>%
   select(stabbr, taxtype, pchsd, hpsd) %>%
@@ -641,8 +688,9 @@ measures <- vol %>%
   left_join(sregspdf, by = c("stabbr", "taxtype"))
 
 # get all relevant correlations
-corr_types <- measures %>%
-  select(-stabbr) %>%
+corr_types <- measures %>% # measures must be ungrouped so that we can drop stabbr!
+  filter(stabbr != "US") %>%
+  select(-stabbr) %>%  
   group_by(taxtype) %>%
   nest() %>%
   summarise(map_df(data, corr_tidy), .groups="drop")  %>%
@@ -654,20 +702,86 @@ corr_types %>%
   pivot_wider(names_from = pair, values_from = estimate)
 
 corr_states <- measures %>%
-  select(-taxtype) %>%
+  select(-taxtype) %>%  # measures must be ungrouped...
   group_by(stabbr) %>%
   nest() %>%
   # only include columns we want in the correlation
-  summarise(map_df(data, corr_tidy), .groups="drop") %>%
+  summarise(map_df(data, corr_tidy), .groups="drop") %>%  # note this will produce some NaNs
   unite("pair", column1, column2, remove=FALSE)
 # corr_states
 
 
 ```
 
+
+## The measures
+
+First we look at the measures for the nation (excluding the state GDP measure), by tax.
+
+A few observations:
+
+*   By all measures, severance taxes are the most volatile, followed by corporate income taxes, personal income, and general sales taxes.
+*   Selected sales taxes are the least volatile.
+*   The portfolio of taxes -- total taxes -- is less volatile than the income tax but more volatile than sales taxes.
+
+
+```{r eval=TRUE, include=TRUE}
+# hpsd_pchsd	sre_pchsd	sre_hpsd	srese_pchsd	srese_hpsd	srese_sre
+vorder <- c("tottax", "iit", "gst", "cit", 
+            "selsalestax", "sevtax", "othertax")
+vlabs = c("Total taxes", 
+          "Individual income tax", "General sales tax", "Corporate income tax", 
+          "Selected sales taxes", "Severance taxes", "Other taxes")
+
+tabdata <- measures %>%
+  filter(stabbr=="US") %>%
+  select(taxtype, pchsd, hpsd, sre, srese) %>%
+  mutate(taxtype=factor(taxtype, levels=vorder, labels=vlabs)) %>%
+  arrange(taxtype)
+shade_rows <- seq(2, nrow(tabdata), 2)
+
+tabdata %>%
+  gt() %>%
+    tab_header(
+      title = "Selected volatility measures by tax type for the U.S. as a whole",
+      subtitle = "Estimated over 1990-2018"
+      ) %>%
+      cols_label(taxtype="Type of tax",
+                 pchsd=html("Annual % change<br>(Standard deviation)"),
+                 hpsd=html("% Deviation from trend<br>(Standard deviation)"),
+                 sre=html("Short-run elasticity<br>(SRE)"),
+                 srese=html("Standard error<br>of SRE")) %>%
+      cols_align(
+        align = c("left"),
+        columns = taxtype) %>%
+      fmt_number(
+        columns = -contains("tax"),
+        decimals = 2) %>%
+    tab_style(
+      style = list(
+        cell_fill(color = "lightgrey")
+      ),
+      locations = cells_body(
+        rows=shade_rows
+      )
+    )
+
+```
+
+
+
+
 ## How correlated are the different measures, by tax?
 
-## Correlation of the main measures
+Next we look at how correlated the measures are. To do this, we take each summary measure for each tax in each state, and compute the correlation of these measures. For example, the table shows that the percent-change and deviation-from-trend measures have a 0.818 correlation for the income tax. This suggests that when the percent-change volatility measure is high for the income tax in a given state, the deviation-from-trend measure is usually high in the state as well.
+
+A few observations:
+
+*   The two measures that do NOT control for the economy -- that is, annual percent change, and % deviation from trend - are highly correlated for almost all taxes (1st column of numbers). However, the correlation is very low for severance taxes. That suggests how states think about measures here is particularly important since volatility may be high by one measure but not for another.
+*   The measure that controls for the economy (short-run elasticity -- SRE) is not highly correlated with the two "gross" or total volatility measures (columns 2 and 3). Clearly they measure different things. If budget policymakers care about volatility, wherever it comes from, then short-run elasticity is not enough.
+*   The standard error of the SRE -- a measure of how well you can predict revenue changes when you know how the economy changes -- is highly correlated with our two measures of total volatity. In other words, if you have a lot of volatility above and beyond what the economy suggests (a higher standard error), then you likely have a lot of total volatility. Another indication that if you care about total volatility, the SRE is not enough.
+
+
 ```{r eval=TRUE, include=TRUE}
 
 # hpsd_pchsd	sre_pchsd	sre_hpsd	srese_pchsd	srese_hpsd	srese_sre
@@ -687,7 +801,7 @@ tabdata <- corr_types %>%
   arrange(taxtype, pair) %>%
   pivot_wider(names_from = pair, values_from = estimate)
 shade_rows <- seq(2, nrow(tabdata), 2)
-names(tabdata)
+# names(tabdata)
 
 tabdata %>%
   gt() %>%
@@ -696,12 +810,12 @@ tabdata %>%
       subtitle = "Estimated over 1990-2018"
       ) %>%
       cols_label(taxtype="Type of tax",
-                 hpsd_pchsd=html("Percent change<br>-- with --<br>Deviation from trend"),
-                 sre_pchsd=html("Percent change<br>-- with --<br>Short-run elasticity (SRE)"),
-                 sre_hpsd=html("Deviation from trend<br>-- with --<br>Short-run elasticity (SRE)"),
-                 srese_sre=html("Short-run elasticity (SRE)<br>-- with --<br>Standard error of SRE"),
-                 srese_pchsd=html("Percent change<br>-- with --<br>Standard error of SRE"),
-                 srese_hpsd=html("Deviation from trend<br>-- with --<br>Standard error of SRE")) %>%
+                 hpsd_pchsd=html("Percent change<br>-- correlation with --<br>Deviation from trend"),
+                 sre_pchsd=html("Percent change<br>-- correlation with --<br>Short-run elasticity (SRE)"),
+                 sre_hpsd=html("Deviation from trend<br>-- correlation with --<br>Short-run elasticity (SRE)"),
+                 srese_sre=html("Short-run elasticity (SRE)<br>-- correlation with --<br>Standard error of SRE"),
+                 srese_pchsd=html("Percent change<br>-- correlation with --<br>Standard error of SRE"),
+                 srese_hpsd=html("Deviation from trend<br>-- correlation with --<br>Standard error of SRE")) %>%
       cols_align(
         align = c("left"),
         columns = taxtype) %>%
@@ -717,54 +831,90 @@ tabdata %>%
       )
     )
 	
-# data2 %>%
-#     select(-stabbr) %>%
-#     group_by(stname) %>%
-#     gt() %>%
-#     tab_header(
-#       title = ttitle,
-#       subtitle = "New York and the nation"
-#       ) %>%
-#     cols_label(stname="",
-#                varname="",
-#                pch="% change") %>%
-#     fmt_currency(
-#       columns = c("2017", "2018", "change"),
-#       decimals = 0,
-#       accounting = TRUE,
-#       suffixing = FALSE
-#     ) %>%
-#       fmt_percent(
-#       columns = c("pch"),
-#       decimals = 1
-#     ) %>%
-#     fmt_missing(
-#       columns = c("2017", "2018", "change", "pch"),
-#       missing_text = "n.m."
-#     ) %>%
-#     tab_style(
-#       style = list(
-#         cell_fill(color = "#f7f7f7")
-#       ),
-#       locations = cells_body(
-#         rows=shade_rows
-#       )
-#     ) %>%
-#     cols_align(align = c("left"), columns = c("stname", "varname")) %>%
-#     tab_options(row_group.background.color = "lightgreen") %>%
-#     tab_footnote(
-#     footnote = "For NY minus US rows, % change is NY % change minus US % change",
-#     locations = cells_column_labels( 
-#       columns = vars(pch)
-#       )
-#     ) %>%
-#     tab_source_note(
-#       source_note = note
-#       )
 ```
 
-## Correlation of volatility measures that control for national or state GDP
+
+## Scatterplots of measures
+
+Let's visualize some of these conclusions:
+
+```{r eval=TRUE}
+# get index by type of tax, for each state
+count(measures, stabbr)
+scatdata <- measures %>%
+  filter(stabbr != "US") %>%
+  select(-c(srese, sregspse)) %>%
+  group_by(taxtype) %>%
+  mutate(across(-c(stabbr), ~ .x / median(.x, n.rm=TRUE) * 100))
+scatdata  
+```
+
+### Relationship between the total volatility measures
+
+```{r eval=TRUE, include=TRUE}
+scatdata %>%
+  filter(taxtype=="tottax") %>%
+  filter(stabbr != "AK") %>%
+  ggplot(aes(x=pchsd, y=hpsd, label=stabbr)) +
+   geom_point(colour="blue", size=0.5) +
+   geom_text(colour="blue", size=2) +
+   geom_abline(slope=1) +
+   labs(x="Standard deviation of % change",
+        y="Standard deviation of % deviation from trend") +
+   ggtitle("Relationship between the two total volatility measures, total taxes",
+           subtitle="Indexed so that state median=100; Alaska excluded")
+
+```
+
+
+### Relationship between total volatility measure and short-run elasticity (controlling for national economy)
+
+Observations:
+
+*   States to the right have a lot of total volatility.
+*   States that are high have a lot of volatility beyond what we can see from the national economy.
+*   States that are low (below the 45-degree line) and far to the right have a lot of total volatility, but much of it is explained by the national economy.
+
+
+```{r eval=TRUE, include=TRUE}
+scatdata %>%
+  filter(taxtype=="tottax") %>%
+  filter(stabbr != "AK") %>%
+  ggplot(aes(x=hpsd, y=sre, label=stabbr)) +
+   geom_point(colour="blue", size=0.5) +
+   geom_text(colour="blue", size=2) +
+   geom_abline(slope=1) +
+   labs(x="Standard deviation of % deviation from trend",
+        y="Short run elasticity") +
+   ggtitle("Relationship between short-run elasticity (controlling for national GDP) and total volatility (trend deviation), total taxes",
+           subtitle="Indexed so that state median=100; Alaska excluded")
+
+```
+
+
+### Relationship between short-run elasticity controlling for national economy and controlling for state economy
+
+```{r eval=TRUE, include=TRUE}
+
+scatdata %>%
+  filter(taxtype=="tottax") %>%
+  filter(stabbr != "AK") %>%
+  ggplot(aes(x=sre, y=sregsp, label=stabbr)) +
+   geom_point(colour="blue", size=0.5) +
+   geom_text(colour="blue", size=2) +
+   geom_abline(slope=1) +
+   labs(x="Short run elasticity - national economy",
+        y="Short run elasticity - state economy") +
+   ggtitle("Relationship between short-run elasticity controlling for state economy vs. national economy, total taxes",
+           subtitle="Indexed so that state median=100; Alaska excluded")
+
+```
+
+
+
+
 ```{r}
+## Correlation of volatility measures that control for national or state GDP
 count(corr_types, pair)
 # hpsd_pchsd	sre_pchsd	sre_hpsd	srese_pchsd	srese_hpsd	srese_sre
 vorder <- c("tottax", "iit", "gst", "cit", 
@@ -816,68 +966,10 @@ tabdata %>%
 ```
 
 
-## Scatterplots of measures
-```{r}
-# pchsd hpsd sre sregsp
-# get index by type of tax, for each state
-count(measures, stabbr)
-scatdata <- measures %>%
-  filter(stabbr != "US") %>%
-  select(-c(srese, sregspse)) %>%
-  group_by(taxtype) %>%
-  mutate(across(-c(stabbr), ~ .x / median(.x, n.rm=TRUE) * 100))
-scatdata  
-
-scatdata %>%
-  filter(taxtype=="tottax", stabbr != "AK") %>%
-  ggplot(aes(x=pchsd, y=hpsd, label=stabbr)) +
-   geom_point(colour="blue", size=0.5) +
-   geom_text(colour="blue", size=2) +
-   geom_abline(slope=1)
-
-scatdata %>%
-  filter(taxtype=="tottax", stabbr != "AK") %>%
-  ggplot(aes(x=sre, y=hpsd, label=stabbr)) +
-   geom_point(colour="blue", size=0.5) +
-   geom_text(colour="blue", size=2) +
-   geom_abline(slope=1)
-
-scatdata %>%
-  filter(taxtype=="tottax", stabbr != "AK") %>%
-  ggplot(aes(x=sre, y=sregsp, label=stabbr)) +
-   geom_point(colour="blue", size=0.5) +
-   geom_text(colour="blue", size=2) +
-   geom_abline(slope=1)
-
-scatdata %>%
-  filter(taxtype=="tottax", stabbr != "AK") %>%
-  ggplot(aes(x=sregsp, y=hpsd, label=stabbr)) +
-   geom_point(colour="blue", size=0.5) +
-   geom_text(colour="blue", size=2) +
-   geom_abline(slope=1)
-  
-
- # vol %>%
- #   select(stabbr, taxtype, vartype, data) %>%
- #   unnest(data) %>%
- #   group_by(stabbr, taxtype, vartype) %>%
- #   summarise(pchsd=sd(pch, na.rm=TRUE), .groups="drop") %>%
- #   pivot_wider(names_from = vartype, values_from = pchsd) %>%
- #   filter(taxtype %in% txs) %>%
- #   ggplot(aes(x=raw, y=adjusted, label=stabbr)) +
- #   geom_point(colour="blue", size=0.5) +
- #   geom_text(colour="blue", size=2) +
- #   geom_abline(slope=1) +
- #        nolegend_title +
- #   facet_wrap(~taxtype, ncol=2, scales = "free") +
- #   theme_report
 
 
-```
-
-
+```{r include=FALSE, eval=FALSE}
 ## State maps of volatility
-```{r eval=TRUE, include=TRUE}
 us_states <- map_data("state")
 
 count(us_states, region)  # 49, including DC!
@@ -892,15 +984,13 @@ p + geom_polygon(color = "gray90", size = 0.1) +
     guides(fill = FALSE)
 
 
-
 ```
 
 
 
 
-
+```{r include=FALSE, eval=FALSE}
 ## volatility by tax
-```{r eval=TRUE, include=TRUE}
 vranks <- vol %>%
   filter(!(stabbr=="AK" & taxtype=="iit")) %>%
   group_by(taxtype) %>%
@@ -922,19 +1012,15 @@ vranks %>%
 
 ```
 
+
 # Volatility over time
-```{r include=TRUE, eval=TRUE}
+
+For this we calculate rolling volatility measures for each state and tax, looking back over 15 years. Thus in each year (for each state-tax combination), we look back 15 years to compute the standard deviation of the percent change, the standard deviation of the percent deviation from trend, and the short-run elasticity.
+
+
+```{r eval=TRUE, include=FALSE}
 # now we want rolling versions of the volatility measures
 vperiod <- 15
-
-# vol_roll <- vbase  %>%
-#   filter(stabbr=="NY") %>%
-#   filter(year >= 1990) %>%
-#   group_by(stabbr, taxtype) %>%
-#   # nest() %>%
-#   rowwise %>%
-#   mutate(pchsd = sd(taxpch, na.rm=TRUE))
-# vol_roll
 
 vbase %>%
   filter(stabbr=="MO", taxtype=="sevtax", year >= 1970)
@@ -954,78 +1040,143 @@ vol_roll <- vbase  %>%
 vol_roll
 tail(vol_roll)
 
-vol_roll %>%
-  filter(stabbr=="NY", taxtype=="tottax") %>%
-  ggplot(aes(year, sre)) +
-  geom_line()
+```
 
 
-vol_roll %>%
-  filter(stabbr=="CT", taxtype=="tottax") %>%
-  ggplot(aes(year, sre)) +
-  geom_line()
+## Total taxes for the U.S.
 
-st <- "MA"
+Observations:
+
+*   Both kinds of measures show an increase in volatility for the U.S. as a whole over the last 20 years.
+*   The measure controlling for the economy declined after 2006.
+*   The total volatility measure declined after 2013.
+*   Both remain far higher than the 1999-prior period.
+*   It would be good to add more history to this.
+
+
+```{r include=TRUE, eval=TRUE}
+
+st <- "US"
 tax <- "tottax"
 vol_roll %>%
   select(stabbr, taxtype, year, hpsd, sre) %>%
   filter(year >= 1985) %>%
   filter(stabbr==st, taxtype==tax) %>%
   pivot_longer(cols=c(hpsd, sre)) %>%
+  mutate(name=factor(name, 
+                     levels=c("hpsd", "sre"),
+                     labels=c("% deviation\nfrom trend",
+                              "short-run elasticity\n(national)"))) %>%
   group_by(stabbr, taxtype, name) %>%
-  mutate(ivalue=value / value[year==2000] * 100) %>%
+  mutate(ivalue=value / value[year==1999] * 100) %>%
   ggplot(aes(year, ivalue, colour=name)) +
   geom_line() +
-  geom_point()
-
-
-
-
-rollsre <- function(y, x, nobs) {
-  # print("in rollsre")
-  sremod <- function(df){
-    # print("in sremod")
-    mod <- lm(y ~ x, na.action=na.exclude, data=df)
-    sre <- coef(summary(mod))[2, "Estimate"]
-    sre
-  }
-  safe_sremod <- safely(sremod)
-  # print("before df")
-  df <- data.frame(y=y, x=x)
-  # print("after df")
-  zoo::rollapply(df, nobs, function(df) sremod(as.data.frame(df)),
-                 by.column = FALSE,
-                 fill=NA, align="right")
-}
-
-rr2 <- rollapply(seat2, width = 36,
-                FUN = function(z) coef(lm(y ~ y1 + y12, data = as.data.frame(z))),
-                by.column = FALSE, align = "right")
-
-rollsd_p <- function(x, nobs) {
-  # population standard deviation
-  sdp <- function(x){
-    n <- sum(!is.na(x))
-    sd(x, na.rm=TRUE) * sqrt((n - 1) / n)
-  }
-  zoo::rollapply(x, nobs, function(x) sdp(x),
-                 fill=NA, align="right")
-}
-
-vol <- vbase %>%
-  filter(year >= 1990) %>%
-  group_by(stabbr, taxtype) %>%
-  nest() %>%
-  mutate(pchsd = map_dbl(data, function(df) sd(df$taxpch, na.rm=TRUE)),
-         hpsd = map_dbl(data, function(df) sd(df$tax / df$trend * 100 - 100, na.rm=TRUE)),
-         sremod = map(data, safely(function(df) lm(dltax ~ dlgdp, data=df))),
-         sregspmod = map(data, safely(function(df) lm(dltax ~ dlsgdp, data=df)))) %>%
-  ungroup
+  geom_point() +
+  geom_hline(yintercept = 100) +
+  scale_colour_manual(values=c("blue", "red")) +
+  labs(x=NULL, y="Index (1999=100)") +
+  scale_y_continuous(limits=c(0, NA)) +
+  ggtitle("Volatility measures over time, U.S. as a whole, total taxes",
+          subtitle="Indexed to 1999=100") +
+  theme_report +
+  nolegend_title
 
 
 ```
 
 
+## Volatility by tax, for the U.S.
+
+```{r eval=TRUE, include=TRUE, fig.width=10}
+
+group1 <- c("tottax", "iit", "gst", "cit")
+group2 <- c("tottax", "selsalestax", "othertax", "sevtax")
+
+st <- "US"
+p1 <- vol_roll %>%
+  select(stabbr, taxtype, year, hpsd, sre) %>%
+  filter(year >= 1985) %>%
+  filter(stabbr==st, taxtype %in% group1) %>%
+  mutate(taxtype=factor(taxtype, levels=group1)) %>%
+  arrange(taxtype) %>%
+  group_by(stabbr, taxtype) %>%
+  mutate(ivalue=hpsd / hpsd[year==1999] * 100) %>%
+  ggplot(aes(year, ivalue, colour=taxtype)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 100) +
+  # scale_colour_manual(values=c("blue", "red")) +
+  labs(x=NULL, y="Index (1999=100)") +
+  scale_y_continuous(limits=c(0, NA)) +
+  ggtitle("Deviation-from-trend volatility over time, U.S. as a whole, selected major taxes",
+          subtitle="Indexed to 1999=100") +
+  theme_report +
+  nolegend_title
+# p1
+
+p2 <- vol_roll %>%
+  select(stabbr, taxtype, year, hpsd, sre) %>%
+  filter(year >= 1985) %>%
+  filter(stabbr==st, taxtype %in% group2) %>%
+  mutate(taxtype=factor(taxtype, levels=group2)) %>%
+  arrange(taxtype) %>%
+  group_by(stabbr, taxtype) %>%
+  mutate(ivalue=hpsd / hpsd[year==1999] * 100) %>%
+  ggplot(aes(year, ivalue, colour=taxtype)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 100) +
+  # scale_colour_manual(values=c("blue", "red")) +
+  labs(x=NULL, y="Index (1999=100)") +
+  scale_y_continuous(limits=c(0, NA)) +
+  ggtitle("Deviation-from-trend volatility over time, U.S. as a whole, other taxes",
+          subtitle="Indexed to 1999=100") +
+  theme_report +
+  nolegend_title
+# p2
+
+p1 + p2
+
+
+```
+
+
+## Volatility over time by state, total taxes
+
+Observations:
+
+*   The volatility increase was widespread.
+*   But far bigger in some places than others.
+*   Some significant exeptions.
+*   Not declining everywhere
+*   I need a more-informative visualization.
+
+
+```{r eval=TRUE, include=TRUE, fig.width=10}
+
+p <- vol_roll %>%
+  filter(year >= 1985) %>%
+  filter(stabbr != "US", taxtype=="tottax") %>%
+  select(stabbr, taxtype, year, hpsd) %>%
+  left_join(stcodes2 %>% select(stabbr, beargn.name, cenrgn.name)) %>%
+  arrange(beargn.name, stabbr) %>%
+  group_by(stabbr, taxtype) %>%
+  mutate(ivalue=hpsd / hpsd[year==1999] * 100) %>%
+  ggplot(aes(year, ivalue, colour=stabbr)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 100) +
+  labs(x=NULL, y="Index (1999=100)") +
+  scale_y_continuous(limits=c(0, NA)) +
+  ggtitle("Deviation-from-trend volatility over time by state",
+          subtitle="Indexed to 1999=100") +
+  theme_report +
+  nolegend_title +
+  facet_wrap(~beargn.name, scales="fixed", ncol=3)
+
+p
+
+```
 
 
 # Impact of policy changes
@@ -2222,7 +2373,7 @@ p
 ```
 
 
-# Nest play area
+# Experimental area
 ```{r}
 
 # how correlated are measures
