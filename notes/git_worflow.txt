@@ -1,0 +1,72 @@
+
+https://git-scm.com/docs
+https://www.freecodecamp.org/news/10-important-git-commands-that-every-developer-should-know/
+https://confluence.atlassian.com/bitbucketserver/basic-git-commands-776639767.html
+https://happygitwithr.com/git-commands.html
+https://www.geos.ed.ac.uk/~smudd/NMDM_Course/html/more_advanced_github.html
+https://dzone.com/articles/top-20-git-commands-with-examples
+https://docs.github.com/en/desktop
+
+
+0. git setup
+git config –global user.name “donboyd5”
+
+
+1. when starting work from a different computer:
+
+# pull project from remote
+  git clone https://github.com/USERNAME/REPOSITORY.git  # get a repository (probably mine)
+  git remote --verbose  # Check the remote was cloned successfully:
+
+# how do things look?
+  git status
+  git log
+  git log --oneline
+  
+Compare versions:
+  git diff
+  
+Push local master to GitHub master and have local master track master on GitHub:
+git push --set-upstream origin master  # you only need to set upstream tracking once!  
+git push -u origin master  # shorter form
+
+
+# create new branch
+  git checkout -b linux # or whatever branch name is desired
+
+# stage local changes, commit, check status:
+   git add prep_data.rmd # or whatever
+   git add *  # or maybe git add -A for everything
+   
+   git commit --message "A commit message"  or
+   git commit -m "A commit message" or
+   git commit --all -m "WIP"  # work in progress
+   git commit --amend --all --no-edit  # amends prior and retains message
+   git commit --amend   # will change the previous commit
+   git status
+
+# now merge
+  git checkout main  # other people seem to use master but RStudio uses main
+  git merge linux # or whatever the branch name is
+
+# then push
+  git push
+  
+  
+#----------------------------------------------------------------------------
+2. miscellaneous git commands
+
+  git merge --abort
+
+
+# bringing master up to date with remote  
+git checkout master
+git pull origin master will bring your master branch up to date with the remote repository
+
+# bringing develop branch up to date with the master -- simplest way is just to recreate the pointer:
+  git branch -f develop master
+
+Or, if you already have develop checked out:
+  git reset --hard develop master
+  
+  

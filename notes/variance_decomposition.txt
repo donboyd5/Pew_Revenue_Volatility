@@ -1,0 +1,5 @@
+
+
+# variance decomposition
+# https://quant.stackexchange.com/questions/37147/portfolio-risk-decomposition-different-methodologies
+# https://faculty.washington.edu/ezivot/econ424/riskbudgetingslides.pdf
