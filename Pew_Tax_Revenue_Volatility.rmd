@@ -1846,6 +1846,67 @@ savefig("fig_iitmod_cgresids")
 
 ```
 
+```{r iit_soi}
+# get income components data from Urban TPC
+dsoi <- r"(E:\data\soi)"
+fn <- "historical_source_0.xlsx"
+url <- "https://www.taxpolicycenter.org/file/185517/download?token=cYMr2RRH"
+fpath <- file.path(dsoi, fn)
+download.file(url, fpath, mode="wb")
+
+# year	nret	agi	wages	interest	dividends	busincnet	netcgll	incother	taxbc	taxliab	amt
+# 											
+vnames <- c("year", "nret", "agi", "wages", "interest", "dividends",
+            "busincnet", "netcgll", "incother", "taxbc", "taxliab", "amt")
+df <- read_excel(fpath, 
+                 col_names = vnames,
+                 col_types = "text", 
+                 skip=6)
+ht(df)
+
+df2 <- df %>%
+  select(-c(taxliab, amt)) %>%
+  mutate(year=as.integer(year)) %>%
+  filter(!is.na(year)) %>%
+  mutate(across(-c(year), as.numeric)) %>%
+  filter(year >= 1921) %>%
+  mutate(intdiv=naz(interest) + naz(dividends)) %>%
+  pivot_longer(-year)
+
+df3 <- df2 %>%
+  filter(year >= 1954) %>%
+  arrange(name, year) %>%
+  group_by(name) %>%
+  mutate(trend=hptrend(value, smooth=6.25),
+         pdtrend=value / trend - 1) %>%
+  ungroup
+
+df3 %>%
+  filter(year >= 1955, 
+         !name %in% c("taxbc", "interest", "dividends", "nret")) %>%
+  ggplot(aes(year, pdtrend)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~name, ncol=2)
+
+df3 %>%
+  filter(year >= 1955, 
+         name %in% c("agi", "wages", "busincnet", "netcgll")) %>%
+  ggplot(aes(year, pdtrend, colour=name)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0)
+
+df3 %>%
+  filter(year >= 1955, 
+         name %in% c("agi", "wages", "busincnet", "netcgll")) %>%
+  group_by(name) %>%
+  summarise(mabs=mean(abs(pdtrend)), sd=sd(pdtrend))
+
+
+```
+
 
 # ADDITIONAL ANALYSES
 
