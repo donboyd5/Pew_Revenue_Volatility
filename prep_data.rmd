@@ -69,10 +69,6 @@ str(knitr::opts_chunk$get()) # for a list of default chunk options.
 
 ```{r system_specific}
 # define system-specific variables (e.g., folders)
-
-pkgsource_dir <- r"(C:\Users\donbo\Dropbox\package_sources)" 
-pkgdir <- r"(C:\Users\donbo\Documents\R_projects\Pew_Revenue_Volatility\renv\local)"
-
 beadir <- r"(E:\data\BEAData)"
 qcewdir <- r"(E:\data\BLSData\qcew)"
 scratchdir <- r"(E:\scratch)"
@@ -713,7 +709,7 @@ save(gdpfy, gdppi, recessions, rec_cigxm, marked_qtrs, marked_fyears,
 ## BEA state GDP data
 
 ```{r sgdp_sfy}
-data(package="BEAData")
+# data(package="BEAData")
 # glimpse(sgdp.q)
 summary(sgdp.q)  # starts in 2005-01-01 so this will not be good
 summary(sgdp.a) # 1997-2020, only a bit better

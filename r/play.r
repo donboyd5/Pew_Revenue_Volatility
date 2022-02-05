@@ -437,5 +437,41 @@ t1 %>%
   pivot_wider(names_from=period, values_from = apch) %>%
   mutate(change=second - first)
 
+# construct a few measures
+tmp <- censustax %>%
+  filter(stabbr=="US", name=="tottax", year>=1968) %>%
+  arrange(year) %>%
+  select(year, tax=value) %>%
+  mutate(ltax=lag(tax), 
+         lntax=log(tax),
+         pchya=pchya(tax, year), 
+         lpchya=lag(pchya),
+         dlntax=lntax - lag(lntax),
+         trend=hptrend(tax, smooth=6.25),
+         pdtrend=tax / trend - 1) %>%
+  filter(year >= 1970)
 
+pewmod <- lm(pchya ~ lpchya, na.action=na.exclude, data=tmp)
+summary(pewmod)
+fitted(pewmod)
 
+tmp2 <- tmp %>%
+  mutate(pewpgrow=fitted(pewmod),
+         pewptax=ltax * (1 + pewpgrow),
+         pewerr=pewptax / tax - 1)
+
+tmp2 %>% write_csv(here::here("scratch", "test.csv"))
+
+tmp2 %>%
+  pivot_longer(-year) %>%
+  filter(name %in% c("pchya", "pewpgrow")) %>%
+  ggplot(aes(year, value, colour=name)) +
+  geom_line() +
+  geom_point()
+
+tmp2 %>%
+  pivot_longer(-year) %>%
+  filter(name %in% c("pdtrend", "pewerr")) %>%
+  ggplot(aes(year, value, colour=name)) +
+  geom_line() +
+  geom_point()
