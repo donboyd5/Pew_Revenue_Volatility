@@ -15,6 +15,7 @@ library(tidyverse)
 options(tibble.print_max = 80, tibble.print_min = 80) # if more than 60 rows, print 60 - enough for states
 # ggplot2 tibble tidyr readr purrr dplyr stringr forcats
 # library(purrr)
+library(slider) # part of tidyverse
 library(fs)
 library(vctrs)
 
@@ -33,6 +34,7 @@ library(grDevices)
 library(gridExtra)
 # remotes::install_github("YuLab-SMU/ggbreak")  # good
 library(ggbreak) 
+library(ggrepel)
 library(patchwork)
 library(RColorBrewer)
 library(viridis)
@@ -60,6 +62,12 @@ library(modelr)
 # devtools::install_github("correlatesstatepolicy/cspp")
 # library(cspp)
 library(csppData)
+
+
+# FRED ----
+library(fredr)
+fred_apikey <- "a5e1199baac333154cbffcba3b263c28"
+fredr_set_key(fred_apikey)
 
 
 # Boyd libraries ----

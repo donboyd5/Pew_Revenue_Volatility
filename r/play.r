@@ -475,3 +475,57 @@ tmp2 %>%
   ggplot(aes(year, value, colour=name)) +
   geom_line() +
   geom_point()
+
+# note state gdp only avail 1964+
+tmp <- voldecades %>%
+  filter(stabbr=="CA", name=="gdp", realnom=="nominal", period=="1990-1999") %>%
+  select(stabbr, name, realnom, data) %>%
+  unnest(data)
+IQR(tmp$pch)
+tmp %>% arrange(pch)
+p25(tmp$pch)
+p75(tmp$pch)
+tmp %>%
+  ggplot(aes(year, pch)) +
+  geom_line() +
+  scale_x_continuous(breaks=seq(1900, 2100, 2))
+
+check %>%
+  filter(stabbr=="CA", name=="tottax", realnom=="real")
+
+tmp <- volrecs %>%
+  filter(stabbr=="ND", name=="tottax", realnom=="nominal", recyear==2007) %>%
+  select(stabbr, name, realnom, data) %>%
+  unnest(data)
+tmp
+IQR(tmp$pch)
+tmp %>% arrange(pch)
+p25(tmp$pch)
+p75(tmp$pch)
+
+tmp %>%
+  ggplot(aes(year, pch)) +
+  geom_line() +
+  scale_x_continuous(breaks=seq(1900, 2100, 2))
+
+tmp %>%
+  select(year, value, trend) %>%
+  pivot_longer(-year) %>%
+  ggplot(aes(year, value, colour=name)) +
+  geom_line() +
+  geom_point()
+
+tmp %>%
+  select(year, pch, dpchtrend, pdtrend) %>%
+  pivot_longer(-year) %>%
+  ggplot(aes(year, value, colour=name)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0)
+
+tmp <- volall %>%
+  filter(stabbr=="ND", name=="tottax", realnom=="nominal", period=="2010-2019") %>%
+  select(stabbr, name, realnom, data) %>%
+  unnest(data)
+
+
