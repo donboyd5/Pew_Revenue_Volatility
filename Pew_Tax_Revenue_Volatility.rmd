@@ -1418,6 +1418,49 @@ savefig(basename="fig_pch_decades_taxtype_box", width=6, height=8, scale=1.25)
 ```
 
 
+
+
+```{r fig_pch_recessions_taxtype_box}
+
+pdata <- volrecs %>%
+  filter(realnom=="nominal", 
+         # !period %in% c("1960-1969", "1970-2020"),
+         name %in% taxnames$name,
+         stabbr != "US") %>%
+  select(stabbr, name, namef, recyear, data) %>%
+  unnest(data)
+count(pdata, recyear)
+
+gtitle <- "State tax revenue year over year growth rates by tax type across 6 recessions"
+gsubtitle <- "50 states pooled, box widths indicate IQR of % change"
+p <- pdata %>%
+  # mutate(period=factor(period, levels=unique(pdata$period))) %>%
+  ggplot(aes(x=pch, y=reorder(recyear, desc(recyear)))) +
+  geom_boxplot(width=0.5, 
+               lwd=.1, 
+               outlier.size=.75,
+               notch=FALSE, 
+               fatten=6,
+               fill="blue", 
+               outlier.colour="blue",
+               alpha=.2) +
+  geom_vline(xintercept = 0,) +
+  labs(x="percentage", y=NULL) +
+  scale_x_continuous(breaks=seq(-2, 2, .1), 
+                     labels = label_percent(accuracy=1), 
+                     limits=c(-.38, .62)) +
+  # scale_x_break(c(.65, 1.3)) +
+  # scale_x_break(c(-.58, -.38)) +
+  ggtitle(gtitle,
+          subtitle=gsubtitle) +
+  theme_report +
+  facet_wrap(~namef, ncol=1)
+p
+savefig(basename="fig_pch_recessions_taxtype_box", width=6, height=8, scale=1.25)
+
+```
+
+
 ```{r}
 volall <- readRDS(here::here("data", "volall.rds"))
 glimpse(volall)
@@ -1976,163 +2019,208 @@ p
 
 
 # HOW DO PORTFOLIOS OF TAXES AFFECT TOTAL REVENUE VOLATILITY?
-```{r}
-vbase %>%
-  filter(year %in% 1970:2020) %>%
-  filter(name %in% taxnames$name, name!="sevtax") %>%
-  group_by(name) %>%
-  summarise(pch_mdn=median(pch, na.rm=TRUE),
-            pch_iqr=IQR(pch, na.rm=TRUE)) %>%
-  ggplot(aes(pch_iqr, pch_mdn, label=name)) +
-  geom_point() +
-  geom_text()
-  
-censustax
-summary(sgtax.a)
-glimpse(sgtax.a)
-count(sgtax.a, item, desc)
-count(sgtax.a, year)
-keep <- c("C105", "T09", "T10", "T13", "T16", "T40", "T41", "T50", "T53")
-df <- sgtax.a %>%
-  filter(year %in% 1970:2020, item %in% keep) %>%
-  arrange(item, desc, stabbr, year) %>%
-  group_by(item, desc, stabbr) %>%
-  mutate(pch=pchya(value, year)) %>%
-  group_by(item, desc) %>%
-  summarise(pch_mdn=median(pch, na.rm=TRUE),
-            pch_iqr=IQR(pch, na.rm=TRUE),
-            .groups="drop")
 
-df %>%
-  # mutate(name=abbreviate(desc, minlength = 6)) %>%
-  # mutate(name=str_replace(desc, " ", ""),
-  #        name=str_trunc(name, 10, side="right")) %>%
-  mutate(name=str_wrap(str_trunc(desc, 30, side="right"), width=10)) %>%
-  ggplot(aes(pch_iqr, pch_mdn, label=name)) +
+```{r function_eff}
+
+# function to determine if points are on the efficient frontier
+eff <- function(vol, growth){
+  # vol and growth are vectors of the same length, ordered by vol, then growth
+  df <- tibble(vol, growth) %>%
+    mutate(eff=ifelse(row_number()==1, TRUE, FALSE))
+  eff <- logical(length=length(vol))
+  for(i in 1:length(eff)){
+    if(i==1) {
+      eff[i] <- TRUE
+      bestgrowth <- growth[i]
+    } else if(growth[i] >= bestgrowth) {
+      eff[i] <- TRUE
+      bestgrowth <- growth[i]
+      }
+  }
+  eff
+}
+```
+
+
+
+```{r eff_taxes}
+#.. for the US ----
+pdata <- volall %>%
+  filter(stabbr=="US", realnom=="nominal", name %in% taxnames$name) %>%
+  select(name, namef, period, growthmdn, pchiqr)
+count(pdata, period)
+
+p <- pdata %>%
+  filter(period=="1970-2020", name!="sevtax") %>%
+  arrange(pchiqr, growthmdn) %>%
+  mutate(eff=eff(pchiqr, growthmdn)) %>%
+  ggplot(aes(pchiqr, growthmdn)) +
   geom_point() +
-  geom_text(position=position_dodge(width=.001)) +
-  geom_line(data=. %>% filter(item %in% c("T10", "C105", "T40")))
+  geom_text_repel(aes(label=str_wrap(namef, 10))) +
+  geom_line(color="blue", data=. %>% filter(eff)) +
+  labs(x="Volatility (IQR of % change)",
+       y="Growth (median growth rate across years)",
+       title=) +
+  theme_report +
+  scale_x_continuous(labels=label_percent(accuracy=1), limits=c(0, NA)) +
+  scale_y_continuous(labels=label_percent(accuracy=1), limits=c(0, NA))
+
+p
+# efficient
+
+# compute a tax efficient frontier using all taxes
+# figure out which items to keep
+tmp <- sgtax.a %>%
+  filter(stabbr=="US", year==max(year))
+tmp %>% arrange(-value)
+#     year stabbr item       value desc                         itemsort
+#    <int> <chr>  <chr>      <dbl> <chr>                           <int>
+#  1  2020 US     C105  1066132493 Total Taxes                         1
+#  2  2020 US     C107   513307715 Tot Sales & Gr Rec Tax              3
+#  3  2020 US     C129   440903521 Total Income Taxes                 25
+#  4  2020 US     T40    388006995 Individual Income Tax (T40)        26
+#  5  2020 US     T09    341813760 Total Gen Sales Tax (T09)           4
+#  6  2020 US     C109   171493955 Total Select Sales Tax              5
+#  7  2020 US     C118    59079235 Total License Taxes                14
+#  8  2020 US     T41     52896526 Corp Net Income Tax (T41)          27
+#  9  2020 US     T13     51133372 Motor Fuels Tax (T13)               9
+# 10  2020 US     T19     51103622 Other Select Sales Tax (T19)       13
+# 11  2020 US     C130    30986202 Total Other Taxes                  28
+# 12  2020 US     C123    30507884 Motor Veh & Oper Lic               19
+# 13  2020 US     T24     27754672 Motor Vehicle License (T24)        20
+# 14  2020 US     T12     24689026 Insurance Premium Tax (T12)         8
+# 15  2020 US     T01     21855820 Property Tax (T01)                  2
+# 16  2020 US     T16     18489166 Tobacco Tax (T16)                  12
+# 17  2020 US     T28     16195455 Occup and Bus Lic NEC (T28)        23
+# 18  2020 US     T15     12106473 Public Utility Tax (T15)           11
+# 19  2020 US     T53     11546995 Severance Tax (T53)                31
+# 20  2020 US     T51     11009137 Docum and Stock Tr Tax (T51)       30
+# 21  2020 US     T11      7024577 Amusement Tax (T11)                 7
+# 22  2020 US     T10      6820969 Alcoholic Beverage Tax (T10)        6
+# 23  2020 US     T22      6466508 Corporation License (T22)          17
+# 24  2020 US     T50      5102727 Death and Gift Tax (T50)           29
+# 25  2020 US     T99      3327343 Taxes NEC (T99)                    32
+# 26  2020 US     T25      2753212 Motor Veh Oper License (T25)       21
+# 27  2020 US     T23      1842978 Hunt and Fish License (T23)        18
+# 28  2020 US     T29      1577298 Other License Taxes (T29)          24
+# 29  2020 US     T27      1213651 Public Utility License (T27)       22
+# 30  2020 US     T20       745570 Alcoholic Beverage Lic (T20)       15
+# 31  2020 US     T21       529891 Amusement License (T21)            16
+# 32  2020 US     T14       126750 Parimutuels Tax (T14)              10
+
+#.. using all state data ----
+keep <- c("C105", "T40", "T09", "T41", "T13", "T19", "T24", "T12", "T01", "T16", "T28", "T15")
+pdata1 <- sgtax.a %>%
+  filter(year >= 1999, item %in% keep, stabbr!="US") %>%
+  mutate(name=str_extract_before_first(desc, "(") %>% str_trim()) %>%
+  select(stabbr, name, year, value) %>%
+  arrange(stabbr, name, year) %>%
+  group_by(stabbr, name) %>%
+  mutate(pch=pchya(value, year)) %>%
+  filter(!is.na(pch)) %>%
+  group_by(name) %>%
+  summarise(n=n(),
+            growthmdn=median(pch, na.rm=TRUE),
+            pchiqr=IQR(pch, na.rm=TRUE),
+            .groups="drop")
+pdata1
+
+pdata <- pdata1
+
+p <- pdata %>%
+  arrange(pchiqr, growthmdn) %>%
+  mutate(eff=eff(pchiqr, growthmdn)) %>%
+  ggplot(aes(pchiqr, growthmdn)) +
+  geom_point() +
+  geom_text_repel(aes(label=str_wrap(name, 10))) +
+  geom_line(color="blue", data=. %>% filter(eff)) +
+  labs(x="Volatility (IQR of % change)",
+       y="Growth (median growth rate across years)",
+       title=) +
+  theme_report +
+  scale_x_continuous(labels=label_percent(accuracy=1), limits=c(0, NA)) +
+  scale_y_continuous(labels=label_percent(accuracy=1), limits=c(0, NA))
+
+p
+# efficient
+
+pdata <- volall %>%
+  filter(stabbr=="US", realnom=="nominal", name %in% taxnames$name, period!="1970-2020") %>%
+  select(name, namef, period, growthmdn, pchiqr)
+
+p <- pdata %>%
+  filter(name!="sevtax") %>%
+  arrange(period, pchiqr, growthmdn) %>%
+  group_by(period) %>%
+  mutate(eff=f(pchiqr, growthmdn)) %>%
+  ungroup %>%
+  ggplot(aes(pchiqr, growthmdn)) +
+  geom_point() +
+  geom_text_repel(aes(label=str_wrap(namef, 10))) +
+  geom_line(color="blue", data=. %>% filter(eff)) +
+  labs(x="Volatility (IQR of % change)",
+       y="Growth (median growth rate across years)",
+       title=) +
+  theme_report +
+  scale_x_continuous(labels=label_percent(accuracy=1), limits=c(0, NA)) +
+  scale_y_continuous(labels=label_percent(accuracy=1), limits=c(0, NA)) +
+  facet_wrap(~period, ncol=2)
+
+p
+
+```
+
+```{r fig_eff_states}
+ns(volall)
+pdata <- volall %>%
+  filter(realnom=="nominal", name=="tottax", period=="1970-2020") %>%
+  select(stabbr, growthmdn, pchiqr)
+
+pdata <- vbase %>%
+  filter(year %in% 2000:2020, name=="tottax", realnom=="nominal") %>%
+  # filter(year %in% 1995:2009, name=="tottax", realnom=="nominal") %>%
+  group_by(stabbr) %>%
+  summarise(growthmdn=median(pch, na.rm=TRUE),
+            pchiqr=IQR(pch, na.rm=TRUE))
+
+show <- c("US", "AK", "DE", "FL", "KY", "LA", "MI", "NM", "OK", "WV", "WY")
+p <- pdata %>%
+  filter(stabbr!="AK") %>%
+  arrange(pchiqr, growthmdn) %>%
+  mutate(eff=f(pchiqr, growthmdn)) %>%
+  ggplot(aes(pchiqr, growthmdn)) +
+  geom_point(size=0.75) +
+  geom_text_repel(aes(label=stabbr), size=2.5, colour="blue",
+                  # nudge_x=-.001, nudge_y=.001,
+                  # position=position_dodge(width=.01),
+                  data=. %>% filter(eff | stabbr %in% show))  +
+  # geom_text(aes(label=stabbr))  +
+  geom_hline(aes(yintercept = median(growthmdn))) +
+  geom_vline(aes(xintercept = median(pchiqr))) +
+  scale_x_continuous(labels=label_percent(accuracy=1), breaks=seq(0, 1, .02), limits=c(0, NA)) +
+  scale_y_continuous(labels=label_percent(accuracy=1), breaks=seq(0, 1, .02), limits=c(0, NA)) +
+  geom_line(color="blue", data=. %>% filter(eff)) +
+  labs(x="Volatility (IQR of % change)",
+       y="Growth (median growth rate across years)",
+       title="State tax revenue growth vs. volatility: The potentially efficient frontier",
+       subtitle="2000-2020") +
+  theme_report
+p
+
+savefig("fig_eff_states", .p=p, .pdata=pdata, width=8, height=6, scale=1)
+# savefig("fig_eff_states", .p=p, .pdata=pdata, width=10, height=6, scale=1.5) 
+
+
+# c("", "", "")
+
 ```
 
 
 
 # HOW DOES VOLATILITY VARY ACROSS STATES?
 
-```{r}
-
-# for each tax, get:
-#   share of total tax revenue in latest year
-#   summary volatility measures
-#     pdtrend
-#     pchya
-#     sre
-vorder <- c("tottax", "iit", "gst", "selsalestax", "cit", "sevtax", "othertax")
-tabbase <- vbase %>%
-  filter(name %in% vorder,
-         realnom=="nominal",
-         # stabbr=="US",
-         year >= 1969) # so we can get lagged value
-
-shares <- tabbase %>%
-  filter(year==2020) %>%
-  select(stabbr, name, year, value) %>%
-  group_by(stabbr) %>%
-  mutate(share=value / value[name=="tottax"])
-
-vol <- tabbase %>%
-  # bring in nominal gdp
-  left_join(vbase %>% 
-              filter(name=="gdp", realnom=="nominal") %>%
-              select(stabbr, year, gdp=value),
-            by=c("stabbr", "year")) %>%
-  group_by(stabbr, name) %>%
-  mutate(dlvalue=dl(value), dlgdp=dl(gdp)) %>%
-  nest() %>%
-  # we must use "safely" because some state-tax combinations might be bad -- for example,
-  # having a zero value for tax revenue which, when we take the log, became NA
-  mutate(sremod = purrr::map(data, safely(function(df) lm(dlvalue ~ dlgdp, data=df)))) %>%
-  ungroup
-
-# sre -- short-run elasticity -- unpack into sre and srese
-# unpack the summary measures from sremod to get:
-#   coefficient (short-run elasticity, sre), and
-#   its standard error
-sredf <- vol %>%
-  ungroup %>%
-  select(stabbr, name, sremod) %>%
-  mutate(result=purrr::map(sremod, "result"),
-         tidied=purrr::map(result, tidy)) %>%
-  select(-c(sremod, result)) %>%
-  unnest(cols=tidied) %>%
-  filter(term=="dlgdp") %>%
-  select(stabbr, name, sre=estimate, srese=std.error)
-# note - we lost MO sevtax; it has some junky values like 0, 1, etc.
-
-# get the other measures
-vol_all <- vol %>%
-  select(stabbr, name, data) %>%
-  unnest(cols=data) %>%
-  group_by(stabbr, name) %>%
-  summarise(pdtrend=IQR(abs(pdtrend), na.rm=TRUE),
-            pchiqr=IQR(abs(pch) - median(abs(pch)), na.rm=TRUE),
-            .groups="drop") %>%
-  ungroup %>%
-  left_join(sredf, by = c("stabbr", "name")) %>%
-  left_join(shares %>%
-              select(stabbr, name, share), 
-            by = c("stabbr", "name")) %>%
-  mutate(namef=factor(name, 
-                      levels=taxnames$name, 
-                      labels=taxnames$namef)) %>%
-  relocate(c(namef, share), .after = name) %>%
-  arrange(namef)
-  
-vol_all
-
-vol_all %>%
-  filter(name=="tottax") %>%
-  arrange(desc(pdtrend))
-
-# 
-# tab <- tabdata %>%
-#   gt() %>%
-#   cols_hide(name) %>%
-#   tab_header(
-#     title = "Selected volatility measures by tax type for the U.S. as a whole",
-#     subtitle = "Estimated over 1970-2020"
-#     ) %>%
-#   cols_label(namef="Type of tax",
-#              share=html("% share of<br>total tax<br>revenue (2020)"),
-#              pdtrend=html("% deviation<br>from trend (IQR)"),             
-#              pchiqr=html("annual % change:<br>absolute value minus<br>its median (IQR)"),
-#              sre=html("short-run<br>elasticity (SRE)"),
-#              srese=html("standard error<br>of SRE")) %>%
-#   cols_align(
-#     align = c("left"),
-#     columns = namef) %>%
-#   fmt_percent(
-#     columns = c(share, pdtrend, pchiqr),
-#     decimals = 1) %>%
-#   fmt_number(
-#     columns = c(sre, srese),
-#     decimals = 2) %>%
-#   tab_style(
-#     style = list(
-#       cell_fill(color = "grey95")
-#       ),
-#     locations = cells_body(
-#       rows=is.even(1:nrow(tabdata))
-#       )
-#     )
-# tab
-# 
-# savetab("tab_all_taxes")
-# 
-```
-
 
 ```{r}
-
 
 pdata <- vbase %>%
   filter(year %in% 2000:2020, realnom=="nominal", name=="tottax") 
@@ -2157,20 +2245,8 @@ p <- pdata %>%
   ggtitle("State tax revenue year over year growth rates, ranked by IQR of % change",
           subtitle="2000-2020") +
   theme_report
+p
 savefig(basename="fig_pch_box")
-
-# not really the efficient frontier, but rather the attractive frontier!
-pdata %>%
-  filter(stabbr != "AK") %>%
-  group_by(stabbr) %>%
-  summarise(pch_mdn=median(pch, na.rm=TRUE),
-            pch_iqr=IQR(pch, na.rm=TRUE),
-            .groups="drop") %>%
-  ggplot(aes(pch_iqr, pch_mdn, label=stabbr)) +
-  geom_point(size=1) +
-  geom_text_repel(size=1.5) +
-  # geom_text(position=position_dodge(width=.001)) +
-  geom_line(data=. %>% filter(stabbr %in% c("MD", "ID", "ND")))
 
 ```
 
@@ -5111,3 +5187,115 @@ savefig("fig_all_pdtrend", .p=p, .pdata=pdata, width=10, height=6, scale=1.5)
 
 
 
+
+```{r}
+
+# for each tax, get:
+#   share of total tax revenue in latest year
+#   summary volatility measures
+#     pdtrend
+#     pchya
+#     sre
+vorder <- c("tottax", "iit", "gst", "selsalestax", "cit", "sevtax", "othertax")
+tabbase <- vbase %>%
+  filter(name %in% vorder,
+         realnom=="nominal",
+         # stabbr=="US",
+         year >= 1969) # so we can get lagged value
+
+shares <- tabbase %>%
+  filter(year==2020) %>%
+  select(stabbr, name, year, value) %>%
+  group_by(stabbr) %>%
+  mutate(share=value / value[name=="tottax"])
+
+vol <- tabbase %>%
+  # bring in nominal gdp
+  left_join(vbase %>% 
+              filter(name=="gdp", realnom=="nominal") %>%
+              select(stabbr, year, gdp=value),
+            by=c("stabbr", "year")) %>%
+  group_by(stabbr, name) %>%
+  mutate(dlvalue=dl(value), dlgdp=dl(gdp)) %>%
+  nest() %>%
+  # we must use "safely" because some state-tax combinations might be bad -- for example,
+  # having a zero value for tax revenue which, when we take the log, became NA
+  mutate(sremod = purrr::map(data, safely(function(df) lm(dlvalue ~ dlgdp, data=df)))) %>%
+  ungroup
+
+# sre -- short-run elasticity -- unpack into sre and srese
+# unpack the summary measures from sremod to get:
+#   coefficient (short-run elasticity, sre), and
+#   its standard error
+sredf <- vol %>%
+  ungroup %>%
+  select(stabbr, name, sremod) %>%
+  mutate(result=purrr::map(sremod, "result"),
+         tidied=purrr::map(result, tidy)) %>%
+  select(-c(sremod, result)) %>%
+  unnest(cols=tidied) %>%
+  filter(term=="dlgdp") %>%
+  select(stabbr, name, sre=estimate, srese=std.error)
+# note - we lost MO sevtax; it has some junky values like 0, 1, etc.
+
+# get the other measures
+vol_all <- vol %>%
+  select(stabbr, name, data) %>%
+  unnest(cols=data) %>%
+  group_by(stabbr, name) %>%
+  summarise(pdtrend=IQR(abs(pdtrend), na.rm=TRUE),
+            pchiqr=IQR(abs(pch) - median(abs(pch)), na.rm=TRUE),
+            .groups="drop") %>%
+  ungroup %>%
+  left_join(sredf, by = c("stabbr", "name")) %>%
+  left_join(shares %>%
+              select(stabbr, name, share), 
+            by = c("stabbr", "name")) %>%
+  mutate(namef=factor(name, 
+                      levels=taxnames$name, 
+                      labels=taxnames$namef)) %>%
+  relocate(c(namef, share), .after = name) %>%
+  arrange(namef)
+  
+vol_all
+
+vol_all %>%
+  filter(name=="tottax") %>%
+  arrange(desc(pdtrend))
+
+# 
+# tab <- tabdata %>%
+#   gt() %>%
+#   cols_hide(name) %>%
+#   tab_header(
+#     title = "Selected volatility measures by tax type for the U.S. as a whole",
+#     subtitle = "Estimated over 1970-2020"
+#     ) %>%
+#   cols_label(namef="Type of tax",
+#              share=html("% share of<br>total tax<br>revenue (2020)"),
+#              pdtrend=html("% deviation<br>from trend (IQR)"),             
+#              pchiqr=html("annual % change:<br>absolute value minus<br>its median (IQR)"),
+#              sre=html("short-run<br>elasticity (SRE)"),
+#              srese=html("standard error<br>of SRE")) %>%
+#   cols_align(
+#     align = c("left"),
+#     columns = namef) %>%
+#   fmt_percent(
+#     columns = c(share, pdtrend, pchiqr),
+#     decimals = 1) %>%
+#   fmt_number(
+#     columns = c(sre, srese),
+#     decimals = 2) %>%
+#   tab_style(
+#     style = list(
+#       cell_fill(color = "grey95")
+#       ),
+#     locations = cells_body(
+#       rows=is.even(1:nrow(tabdata))
+#       )
+#     )
+# tab
+# 
+# savetab("tab_all_taxes")
+# 
+```
