@@ -1035,7 +1035,7 @@ f_volmap <- function(tax="tottax", measure="sre",
 # sd10c
 #  pchplot, fig.height=4.5, fig.width=8, eval=FALSE}
 # summary(sgtax.a)
-irecs <- which(recessions$rec_year >= 1960)
+
 pdata <- vbase %>%
   filter(year >= 1960, 
          name %in% c("tottax", "gdp"), 
@@ -1581,6 +1581,46 @@ savefig(basename="fig_pch_taxtype_box")
 ```
 
 
+```{r fig_pdtrend_taxtype_box}
+
+pdata <- vbase %>%
+  filter(year %in% 2000:2020, 
+         realnom=="nominal", 
+         name %in% taxnames$name,
+         stabbr != "US")
+count(pdata, name)
+
+
+gtitle1 <- "State tax revenue percent difference from trend by tax type,"
+gtitle2 <- "\n50 states pooled, ranked by IQR of % deviation from trend"
+gtitle <- paste0(gtitle1, gtitle2)
+
+p <- pdata %>%
+  left_join(taxnames, by = "name") %>%
+  ggplot(aes(x=pch, y=reorder(namef, pdtrend, IQR, na.rm=TRUE))) +
+  geom_boxplot(width=0.5, 
+               lwd=.1, 
+               outlier.size=.75,
+               notch=FALSE, 
+               fatten=6,
+               fill="blue", 
+               outlier.colour="blue",
+               alpha=.2) +
+  geom_vline(xintercept = 0,) +
+  labs(x="percentage", y=NULL) +
+  scale_x_continuous(breaks=seq(-2, 2, .1), 
+                     labels = label_percent(accuracy=1), 
+                     limits=c(-.38, .62)) +
+  # scale_x_break(c(.65, 1.3)) +
+  # scale_x_break(c(-.58, -.38)) +
+  ggtitle(gtitle,
+          subtitle="2000-2020") +
+  theme_report
+p
+savefig(basename="fig_pdtrend_taxtype_box")
+```
+
+
 ```{r fig_pch_taxtype_decades_box}
 count(volall, period)
 # pdata <- volall %>%
@@ -1634,6 +1674,50 @@ savefig(basename="fig_pch_taxtype_decades_box", width=6, height=8, scale=1.25)
 ```
 
 
+```{r fig_pdtrend_taxtype_decades_box}
+count(volall, period)
+
+pdata <- volall %>%
+  filter(realnom=="nominal", 
+         !period %in% c("1960-1969", "1970-2020"),
+         name %in% taxnames$name,
+         stabbr != "US") %>%
+  select(stabbr, name, namef, period, data) %>%
+  unnest(data)
+
+gtitle1 <- "State tax revenue percent deviation from trend by tax type,"
+gtitle2 <- " 50 states pooled, ranked by IQR of % deviation"
+gtitle <- paste0(gtitle1, gtitle2)
+
+p <- pdata %>%
+  ggplot(aes(x=pch, y=reorder(namef, pdtrend, IQR, na.rm=TRUE))) +
+  geom_boxplot(width=0.5, 
+               lwd=.1, 
+               outlier.size=.75,
+               notch=FALSE, 
+               fatten=6,
+               fill="blue", 
+               outlier.colour="blue",
+               alpha=.2) +
+  geom_vline(xintercept = 0,) +
+  labs(x="percentage", y=NULL) +
+  scale_x_continuous(breaks=seq(-2, 2, .1), 
+                     labels = label_percent(accuracy=1), 
+                     limits=c(-.38, .62)) +
+  # scale_x_break(c(.65, 1.3)) +
+  # scale_x_break(c(-.58, -.38)) +
+  ggtitle(gtitle,
+          subtitle="Five decades") +
+  theme_report +
+  facet_wrap(~period, ncol=1)
+p
+savefig(basename="fig_pdtrend_taxtype_decades_box", width=6, height=8, scale=1.25)
+
+```
+
+
+
+
 ```{r fig_pch_decades_taxtype_box}
 
 pdata <- volall %>%
@@ -1674,6 +1758,44 @@ savefig(basename="fig_pch_decades_taxtype_box", width=6, height=8, scale=1.25)
 ```
 
 
+```{r fig_pdtrend_decades_taxtype_box}
+
+pdata <- volall %>%
+  filter(realnom=="nominal", 
+         !period %in% c("1960-1969", "1970-2020"),
+         name %in% taxnames$name,
+         stabbr != "US") %>%
+  select(stabbr, name, namef, period, data) %>%
+  unnest(data)
+
+gtitle <- "State tax revenue year percent deviation from trend by tax type over 5 decades"
+gsubtitle <- "50 states pooled, box widths indicate IQR of % deviation from trend"
+p <- pdata %>%
+  # mutate(period=factor(period, levels=unique(pdata$period))) %>%
+  ggplot(aes(x=pdtrend, y=reorder(period, desc(period)))) +
+  geom_boxplot(width=0.5, 
+               lwd=.1, 
+               outlier.size=.75,
+               notch=FALSE, 
+               fatten=6,
+               fill="blue", 
+               outlier.colour="blue",
+               alpha=.2) +
+  geom_vline(xintercept = 0,) +
+  labs(x="percentage", y=NULL) +
+  scale_x_continuous(breaks=seq(-2, 2, .1), 
+                     labels = label_percent(accuracy=1), 
+                     limits=c(-.38, .62)) +
+  # scale_x_break(c(.65, 1.3)) +
+  # scale_x_break(c(-.58, -.38)) +
+  ggtitle(gtitle,
+          subtitle=gsubtitle) +
+  theme_report +
+  facet_wrap(~namef, ncol=1)
+p
+savefig(basename="fig_pdtrend_decades_taxtype_box", width=6, height=8, scale=1.25)
+
+```
 
 
 ```{r fig_pch_recessions_taxtype_box}
@@ -1716,6 +1838,46 @@ savefig(basename="fig_pch_recessions_taxtype_box", width=6, height=8, scale=1.25
 
 ```
 
+
+```{r fig_pdtrend_recessions_taxtype_box}
+
+pdata <- volrecs %>%
+  filter(realnom=="nominal", 
+         # !period %in% c("1960-1969", "1970-2020"),
+         name %in% taxnames$name,
+         stabbr != "US") %>%
+  select(stabbr, name, namef, recyear, data) %>%
+  unnest(data)
+count(pdata, recyear)
+
+gtitle <- "State tax revenue percent deviation from trend by tax type across 6 recessions"
+gsubtitle <- "50 states pooled, box widths indicate IQR of % deviation"
+p <- pdata %>%
+  # mutate(period=factor(period, levels=unique(pdata$period))) %>%
+  ggplot(aes(x=pdtrend, y=reorder(recyear, desc(recyear)))) +
+  geom_boxplot(width=0.5, 
+               lwd=.1, 
+               outlier.size=.75,
+               notch=FALSE, 
+               fatten=6,
+               fill="blue", 
+               outlier.colour="blue",
+               alpha=.2) +
+  geom_vline(xintercept = 0,) +
+  labs(x="percentage", y=NULL) +
+  scale_x_continuous(breaks=seq(-2, 2, .1), 
+                     labels = label_percent(accuracy=1), 
+                     limits=c(-.38, .62)) +
+  # scale_x_break(c(.65, 1.3)) +
+  # scale_x_break(c(-.58, -.38)) +
+  ggtitle(gtitle,
+          subtitle=gsubtitle) +
+  theme_report +
+  facet_wrap(~namef, ncol=1)
+p
+savefig(basename="fig_pdtrend_recessions_taxtype_box", width=6, height=8, scale=1.25)
+
+```
 
 ```{r}
 volall <- readRDS(here::here("data", "volall.rds"))
