@@ -460,28 +460,38 @@ glimpse(capgains)
 ```
 
 
-```{r national_agi}
+```{r ONETIME_more_downloads}
+#.. ONETIME: get and save unemployment rate ----
+# https://fred.stlouisfed.org/series/UNRATE
+unrate <- fredr("UNRATE", frequency = "q")
+saveRDS(unrate, here::here("raw_data", "unrate.rds"))
 
-# also see https://www.irs.gov/pub/irs-soi/05in01an.xls
-
+#.. ONETIME: agi ----
 # agi pre-1990
 download.file(url="https://www.irs.gov/pub/irs-soi/histab6.xls",
-              here::here("raw_data", "capgains", "histab6.xls"),
+              here::here("raw_data", "soi", "histab6.xls"),
               mode="wb")
 
 # agi 1990-2019
-download.file(url="https://www.irs.gov/pub/irs-soi/19intaba.xls", 
-              here::here("raw_data", "capgains", "19intaba.xls"),
+download.file(url="https://www.irs.gov/pub/irs-soi/19intaba.xls",
+              here::here("raw_data", "soi", "19intaba.xls"),
               mode="wb")
 
+```
+
+
+
+```{r national_agi}
+
+# also see https://www.irs.gov/pub/irs-soi/05in01an.xls
 # create agi time series
 # $ billions
-agi1 <- read_excel(here::here("raw_data", "capgains", "histab6.xls"),
+agi1 <- read_excel(here::here("raw_data", "soi", "histab6.xls"),
                    col_names = c("year", "aginipa", "agi"),
                    range="A7:C62")
 
 # $ thousands
-agi2 <- read_excel(here::here("raw_data", "capgains", "19intaba.xls"),
+agi2 <- read_excel(here::here("raw_data", "soi", "19intaba.xls"),
                    range="A4:AE117")
 agi2a <- agi2 %>%
   filter(row_number() == 113)
@@ -513,7 +523,7 @@ agi <- agi3 %>%
   filter(keep) %>%
   select(-keep)
 
-# saveRDS(agi, here::here("raw_data", "soi", "agi.rds"))
+saveRDS(agi, here::here("raw_data", "soi", "agi.rds"))
 rm(agi1, agi2, agi2a, agi2b, agi3)
 
 ```
@@ -570,17 +580,17 @@ rec_fyears <- rec_qtrs %>%
 # manuf emp % change
 # cg % change
 
-rec_dur <- recessions %>%
+rec_duration <- recessions %>%
   filter(rec_year >= 1969) %>%
   mutate(duration=interval(peak, trough) %/% months(1)) %>%
   select(recyear=rec_year, peak=peak_quarter, trough=trough_quarter, duration)
 
-rec_pt <- rec_dur %>%
+rec_peaktrough <- rec_duration %>%
   select(-duration) %>%
   pivot_longer(c(peak, trough), names_to = "qtype", values_to = "date")
 
 # rgdp and rpce
-rec_nipa <- rec_pt %>%
+rec_nipa <- rec_peaktrough %>%
   left_join(cigxm %>%
               filter(valtype=="chain", name %in% c("rgdp", "rpce")),
             by = "date") %>%
@@ -590,16 +600,14 @@ rec_nipa <- rec_pt %>%
   select(recyear, name, pch) %>%
   pivot_wider(values_from = pch)
 
-# https://fred.stlouisfed.org/series/UNRATE
-
-# unrate <- fredr("UNRATE", frequency = "q")
+unrate <- readRDS(here::here("raw_data", "unrate.rds"))
 rec_unrate1 <- unrate %>%
   arrange(date) %>%
   select(date, unrate=value) %>%
   mutate(unrate=unrate / 100,
          urminpre = slide_dbl(unrate, ~min(.x, na.rm=TRUE), .before=1*4, .after=1*4),
          urmaxpost=slide_dbl(unrate, ~max(.x, na.rm=TRUE), .before=1*4, .after=2*4)) %>%
-  right_join(recs_pt, by = "date")
+  right_join(rec_peaktrough, by = "date")
 rec_unrate1
 
 rec_unrate <- rec_unrate1 %>%
@@ -621,11 +629,11 @@ rec_cg <- capgains %>%
   mutate(cgmaxpre = slide_dbl(capgains, ~max(.x), .before=2, .after=-1),
          cgminpost=slide_dbl(capgains, ~min(.x), .before=0, .after=2),
          cgpch=cgminpost / cgmaxpre - 1) %>%
-  filter(year %in% recs_dur$recyear)
+  filter(year %in% rec_duration$recyear)
 rec_cg
 
 # combine the recession files
-rec_features <- rec_dur %>%
+rec_features <- rec_duration %>%
   select(-peak, -trough) %>%
   left_join(rec_nipa, by = "recyear") %>%
   left_join(rec_unrate %>%
@@ -642,7 +650,7 @@ rec_features
 ```{r save_econ_national}
 save(gdpfy, gdppi,
      cigxm, capgains, agi,
-     recessions, rec_cigxm, rec_qtrs, rec_fyears, rec_features,
+     recessions, rec_qtrs, rec_fyears, rec_features,
      file = here::here("data", "econ_national.RData"))
 
 # used to include: marked_qtrs, marked_fyears,

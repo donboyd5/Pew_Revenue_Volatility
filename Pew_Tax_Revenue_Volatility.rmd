@@ -182,7 +182,8 @@ pkgdir <- r"(C:\Users\donbo\Documents\R_projects\Pew_Revenue_Volatility\renv\loc
 
 # 2) This step is for Boyd only:
 # uncomment code below, build Boyd packages, save tarballs in the renv local directory
-devtools::build(pkg = file.path(pkgsource_dir, "BEAData"),  # bdata BEAData BLSdata btools qtax
+# bdata BEAData BLSdata bmaps btools qtax
+devtools::build(pkg = file.path(pkgsource_dir, "bmaps"),  
                 path = pkgdir,
                 binary = FALSE,
                 vignettes = FALSE,
@@ -203,7 +204,8 @@ devtools::build(pkg = file.path(pkgsource_dir, "BEAData"),  # bdata BEAData BLSd
 # pkgdir directory (tarball names may be updated from those shown below)
 # renv::install(file.path(pkgdir, "bdata_0.9.tar.gz"))
 # renv::install(file.path(pkgdir, "BEAData_0.7.4.tar.gz"))
-# renv::install(file.path(pkgdir, "BLSdata_0.3.1.tar.gz"))
+# renv::install(file.path(pkgdir, "BLSdata_0.3.1.tar.gz")) 
+# renv::install(file.path(pkgdir, "bmaps_0.1.0.tar.gz"))
 # renv::install(file.path(pkgdir, "btools_0.9.1.tar.gz"))
 # renv::install(file.path(pkgdir, "qtax_0.3.0.tar.gz"))
 
@@ -326,42 +328,35 @@ episodes <- function(x, f="mean"){
 }
 
 
-hpdf <- function(data, colname="value") {
-  # when type="lambda" freq is the lambda parameter for the HP filter
-  # 6.25 is commonly recommended for annual data; see:
-  # Ravn, Morten O., and Harald Uhlig. “On Adjusting the Hodrick-Prescott Filter for the Frequency of Observations.” Review of Economics and Statistics 84, no. 2 (May 2002): 371–76. https://doi.org/10.1162/003465302317411604.
-  mod <- hpfilter(data[colname], freq=6.25, type=c("lambda"), drift=FALSE)
-  tibble(trend=as.numeric(mod$trend),
-         cycle=as.numeric(mod$cycle))
-}
+# hpdf <- function(data, colname="value") {
+#   # when type="lambda" freq is the lambda parameter for the HP filter
+#   # 6.25 is commonly recommended for annual data; see:
+#   # Ravn, Morten O., and Harald Uhlig. “On Adjusting the Hodrick-Prescott Filter for the Frequency of Observations.” Review of Economics and Statistics 84, no. 2 (May 2002): 371–76. https://doi.org/10.1162/003465302317411604.
+#   mod <- hpfilter(data[colname], freq=6.25, type=c("lambda"), drift=FALSE)
+#   tibble(trend=as.numeric(mod$trend),
+#          cycle=as.numeric(mod$cycle))
+# }
 
 
-hptrend <- function(vec, smooth=NULL){
+hptrend <- function(vec, type="lambda", smooth=6.25){
   # Hodrick-Prescott (HP) filter
   # vec: vector of time series data, in order, no missing values
   # returns: trend vector
+  
   # when type="lambda" freq is the lambda parameter for the HP filter
   # 6.25 is commonly recommended for annual data; see:
-  # Ravn, Morten O., and Harald Uhlig. “On Adjusting the Hodrick-Prescott Filter for the Frequency of Observations.” Review of Economics and Statistics 84, no. 2 (May 2002): 371–76. https://doi.org/10.1162/003465302317411604.
-  vts_hp <- hpfilter(ts(vec), freq=smooth, type=c("lambda"), drift=FALSE)
-  as.numeric(vts_hp$trend)
-}
-
-check <- vbase %>%
-  filter(stabbr=="IN", name=="tottax", realnom=="nominal")
-
-hptrend2 <- function(vec, smooth=NULL){
-  # Hodrick-Prescott (HP) filter
-  # vec: vector of time series data, in order, no missing values
-  # returns: trend vector
-  # when type="lambda" freq is the lambda parameter for the HP filter
-  # 6.25 is commonly recommended for annual data; see:
-  # Ravn, Morten O., and Harald Uhlig. “On Adjusting the Hodrick-Prescott Filter for the Frequency of Observations.” Review of Economics and Statistics 84, no. 2 (May 2002): 371–76. https://doi.org/10.1162/003465302317411604.
-  # if statements address percent change, which won't be avail for item 1
+  
+  # Ravn, Morten O., and Harald Uhlig. “On Adjusting the Hodrick-Prescott Filter
+  # for the Frequency of Observations.” Review of Economics and Statistics 84,
+  # no. 2 (May 2002): 371–76. https://doi.org/10.1162/003465302317411604.
+  
+  # if statement allows HP for a percent change where first element is NA
   if(is.na(vec[1])){
     vts <- ts(vec[-1])
   } else vts <- ts(vec)
-  vts_hp <- hpfilter(vts, freq=smooth, type=c("lambda"), drift=FALSE)
+  
+  vts_hp <- hpfilter(vts, freq=smooth, type=type, drift=FALSE)
+  
   trend <- as.numeric(vts_hp$trend)
   if(is.na(vec[1])){
     trend <- c(NA, trend)
@@ -483,7 +478,6 @@ get_measures <- function(df){
 # vorder, taxnames
 stdc <- c(state.abb, "DC")
 
-
 #.. colors ----
 # https://colorbrewer2.org/
 bluered <- c("blue", "#a50f15")  # #a50f15 darkred
@@ -522,24 +516,24 @@ theme_report <- theme_bw() +
     plot.caption = element_text(hjust = 0)
     )
 
-theme_map_boyd <- function(base_size=9, base_family="") {
-  # https://socviz.co/maps.html
-  # https://github.com/kjhealy/socviz
-  require(grid)
-  theme_bw(base_size=base_size, base_family=base_family) %+replace%
-    theme(axis.line=element_blank(),
-          axis.text=element_blank(),
-          axis.ticks=element_blank(),
-          axis.title=element_blank(),
-          panel.background=element_blank(),
-          panel.border=element_blank(),
-          panel.grid=element_blank(),
-          panel.spacing=unit(0, "lines"),
-          plot.background=element_blank(),
-          legend.justification = c(0,0) # ,
-          # legend.position = c(0,0)
-    )
-}
+# theme_map_boyd <- function(base_size=9, base_family="") {
+#   # https://socviz.co/maps.html
+#   # https://github.com/kjhealy/socviz
+#   require(grid)
+#   theme_bw(base_size=base_size, base_family=base_family) %+replace%
+#     theme(axis.line=element_blank(),
+#           axis.text=element_blank(),
+#           axis.ticks=element_blank(),
+#           axis.title=element_blank(),
+#           panel.background=element_blank(),
+#           panel.border=element_blank(),
+#           panel.grid=element_blank(),
+#           panel.spacing=unit(0, "lines"),
+#           plot.background=element_blank(),
+#           legend.justification = c(0,0) # ,
+#           # legend.position = c(0,0)
+#     )
+# }
 
 
 #.. miscellaneous constants ---
@@ -583,7 +577,7 @@ load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
 load(file = here::here("data", "gdp_state.RData"), verbose=TRUE)
 load(file = here::here("data", "qcew_state.RData"), verbose=TRUE)
 load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
-load(file = here::here("data", "bmaps.RData"), verbose=TRUE)
+# load(file = here::here("data", "bmaps.RData"), verbose=TRUE)
 
 ```
 
@@ -704,8 +698,7 @@ stack1 <- bind_rows(
   gdpfy_prep, gdppi_prep, cg_prep,  # US economy
   sgdp_prep, gspsectors_prep, # maybe qcew_slim?? qcew_prep,  # state economies
   tax_prep, gst_prep  # state tax-related variables
-  ) %>%
-  filter(year %in% 1950:2020)  # gdppi price starts in 1947, 1950 seems like a good start
+  )
 glimpse(stack1)
 summary(stack1)
 count(stack1, stabbr)
@@ -726,8 +719,9 @@ summary(rstack1)
 # combine into a single stacked file just US states
 stack <- bind_rows(stack1, rstack1) %>%
   filter(stabbr %in% c("US", state.abb))
+
 glimpse(stack)
-summary(stack)
+summary(stack) # goes back as far as 1929
 count(stack, realnom)
 check <- count(stack, name)
 
@@ -755,64 +749,76 @@ vbase has:
 -   pdtrend (pct difference from trend)
 
 
-
 ```{r vbase}
-# lambda=6.25 is commonly recommended for annual data
-# see OECD World Library and cites within
 
+# gdppi price starts in 1947 so 1950 seems like a good start
+# we want vbase from 1950 forward but we don't do that until we calc percent
+# change as we will lose an observation
 vbase <- stack %>%
   arrange(stabbr, name, realnom, year) %>% 
   group_by(stabbr, name, realnom) %>%
-  mutate(pch=value / value[match(year - 1, year)] - 1,
-         pchtrend=hptrend2(pch, smooth=6.25),
+  filter(year %in% 1949:2020) %>% # keep 1949 so we have percent change
+  mutate(pch=value / value[match(year - 1, year)] - 1) %>%
+  # drop the 1949 values which will have NA for pch
+  filter(year %in% 1950:2020) %>%
+  mutate(pchtrend=hptrend(pch),
          dpchtrend=pch - pchtrend,
-         trend=hptrend2(value, smooth=6.25),
+         trend=hptrend(value),
          pdtrend=value / trend - 1) %>%
   ungroup
 summary(vbase)
+saveRDS(vbase, here::here("data", "vbase.rds"))
 
 ```
 
 ## Function to compute volatility measures from vbase
 ```{r}
-#.. function to create summary vol measures for a time period and set of variables ----
+#.. function create summary vol measures for time period and set of vars ----
 
 f_vol <- function(startend, vars, vbase){
+  # get vars that represent the years used
   year1 <- startend[1]
   year2 <- startend[2]
   period <- paste0(year1, "-", year2)
   print(period)
   
   # vol1 is our starting point for creating measures
+  # it has first difference of log values
   vol1 <- vbase %>%
     filter(name %in% vars,
-         year %in% (year1 - 1):year2) %>% # minus 1 so we can get lagged value
-    # bring in nominal gdp
+           # initially include year before start to get lagged value
+           year %in% (year1 - 1):year2) %>% 
+    # bring in gdp for each state
     left_join(vbase %>% 
                 filter(name=="gdp") %>%
                 select(stabbr, year, realnom, gdp=value),
               by=c("stabbr", "year", "realnom")) %>%
     group_by(stabbr, name, realnom) %>%
     arrange(year) %>%
-    mutate(dlvalue=dl(value), dlgdp=dl(gdp)) %>% # first difference of log values
-    # get rid of unnecessary year1 - 1 value
+    # get first difference of log values
+    mutate(dlvalue=dl(value),
+           dlgdp=dl(gdp)) %>%
+    # get rid of unnecessary year before period start
     filter(year >= year1) %>%
     nest() %>%
     ungroup
   
   # create model-based measures
   volmods <- vol1 %>%
-    # we must use "safely" because some state-tax combinations might be bad -- for example,
+    # use "safely" because some state-tax combinations might be bad -- for example,
     # having a zero value for tax revenue which, when we take the log, became NA
-    mutate(sremod = purrr::map(data, safely(function(df) lm(dlvalue ~ dlgdp, data=df))))
+    mutate(sremod = purrr::map(data, 
+                               safely(function(df) lm(dlvalue ~ dlgdp, data=df))))
   
-  # sre -- short-run elasticity -- unpack into sre and srese
+  # sre -- short-run elasticity (coefficient on dlgdp)
+  #   it is, essentially, the percent change in tax wrt % change in gdp
+  # srese -- standard error of sre
   # unpack the summary measures from sremod to get:
   #   coefficient (short-run elasticity, sre), and
   #   its standard error
   # this will generate warnings where we have models that are not proper
   # we will weed them out later
-  # this can be diome consuming
+  # this can be time consuming
   sredf <- volmods %>%
     select(stabbr, name, realnom, sremod) %>%
     mutate(result=purrr::map(sremod, "result"),
@@ -833,16 +839,19 @@ f_vol <- function(startend, vars, vbase){
     select(stabbr, name, realnom, data) %>%
     unnest(cols=data) %>% # data won't be in the output
     group_by(stabbr, name, realnom) %>% 
-    summarise(growthmdn=median(pch, na.rm=TRUE),
-              pdtrendiqr=IQR(pdtrend, na.rm=TRUE),
-              pchiqr=IQR(pch, na.rm=TRUE),
-              dpchtrendiqr=IQR(dpchtrend, na.rm=TRUE),
-              pchsd=sd(pch, na.rm=TRUE),
-            .groups="drop") %>%
+    summarise(
+      # use median and IQR to calculate robust measures of growth and volatility
+      growthmdn=median(pch, na.rm=TRUE),
+      pdtrendiqr=IQR(pdtrend, na.rm=TRUE),
+      pchiqr=IQR(pch, na.rm=TRUE),
+      dpchtrendiqr=IQR(dpchtrend, na.rm=TRUE),
+      # standard deviation of growth - more traditional, lest robust
+      pchsd=sd(pch, na.rm=TRUE),
+      .groups="drop") %>%
     ungroup 
   
   # put the pieces back together:
-  #   vol1 -- original data
+  #   vol1 -- nested data used to calculate volatility
   #   sredf -- model-based short-run elasticity estimates
   #   volmeas -- other summary measures
   
@@ -866,6 +875,7 @@ f_vol <- function(startend, vars, vbase){
 
 
 ```{r measures_decades}
+vbase <- readRDS(here::here("data", "vbase.rds"))
 
 # now construct a stacked volatility file with several different periods
 count(vbase, name)
@@ -873,7 +883,7 @@ vtax <- c("tottax", "iit", "gst", "selsalestax", "cit", "sevtax", "othertax")
 vnontax <- c("gdp", "capgains")
 vars <- c(vtax, vnontax)
 
-check <- f_vol(c(1995, 2009), vars, vbase)
+# check <- f_vol(c(1995, 2009), vars, vbase) # period Cornia and Nelson used
 
 # get several volatility time periods with different start and end years
 # create a list of start-end pairs for which we want volatility estimates
@@ -907,8 +917,8 @@ recessions
 
 # create a list of start-end pairs for which we want volatility estimates
 recyears <- c(1969, 1973, 1980, 1990, 2001, 2007)
-
 plusminus <- 5
+
 recylist <- purrr::map(recyears, function(y) c(y - plusminus, y + plusminus))
 recylist
 # create vector of periods that we can map back to recyears
@@ -930,6 +940,7 @@ saveRDS(volrecs, here::here("data", "volrecs.rds"))
 ```
 
 
+# MAPPING FUNCTION
 ## Mapping volatility measures
 ```{r}
 #.. function to map vol measures ----
@@ -1002,7 +1013,7 @@ f_volmap <- function(tax="tottax", measure="sre",
     coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
     scale_fill_brewer(palette = "BuPu", na.translate = FALSE) + # , na.value="grey90") +
     # scale_fill_manual(breaks=as.integer(1:4), values=c("red", "green", "yellow", "blue")) +
-    theme_map_boyd() + 
+    theme_map() + 
     theme(legend.position = "right") +
     labs(fill="Quartile: ") +
     # legend_notitle +
@@ -1016,11 +1027,57 @@ f_volmap <- function(tax="tottax", measure="sre",
 ```
 
 
+# ESSENTIALLY ALL PREP BEFORE HERE
+
+# MOTIVATION
+
+```{r fig_tax_gdp_us.png, fig.height=4.5, fig.width=8, eval=TRUE, include=TRUE}
+# sd10c
+#  pchplot, fig.height=4.5, fig.width=8, eval=FALSE}
+# summary(sgtax.a)
+irecs <- which(recessions$rec_year >= 1960)
+pdata <- vbase %>%
+  filter(year >= 1960, 
+         name %in% c("tottax", "gdp"), 
+         realnom=="nominal", 
+         stabbr=="US") %>%
+  select(stabbr, year, name, realnom, year, pch)
+summary(pdata)
+
+p <- pdata %>%
+  ggplot(aes(year, pch, colour=name)) +
+  geom_band(recdata(unique(pdata$year))) +
+  geom_line(size=1) +
+  geom_point(size=1.15) +
+  scale_y_continuous(name="% change",
+                     breaks=seq(-2, 2, .02), 
+                     labels=label_percent(accuracy=1)) +
+  scale_x_continuous(name=NULL, breaks=seq(1960, 2030, 5)) +
+  scale_colour_manual(values=c("red", "blue")) +
+  geom_hline(yintercept = 0) +
+  ggtitle("Year over year growth in state government tax revenue and GDP for the United States",
+          subtitle="Recession periods are shaded") +
+  labs(caption="Source: U.S. Bureau of the Census and Bureau of Economic Analysis") +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust=0, size=9)) +
+  theme(legend.title = element_blank())
+p
+ggsave(filename = here::here("results", "fig_tax_gdp_us.png"), 
+       plot = p, height=5, width=10, scale=1)
+
+```
+
+
+# MAPS
 ```{r map_decades}
 volall <- readRDS(here::here("data", "volall.rds"))
 
-voldecades <- volall %>% filter(period != "1970-2020")
+voldecades <- volall %>% 
+  filter(period != "1970-2020")
 count(voldecades, period)
+
+volfull <- volall %>%
+  filter(period=="1970-2020")
 
 gtitle <- "Tax revenue volatility by decade"
 
@@ -1066,9 +1123,36 @@ savefig(basename="map_recessions_sre", .p=mlist$m, .pdata = mlist$mbase)
 ```
 
 ```{r tab_rec_features}
+vbase <- readRDS(here::here("data", "vbase.rds"))
 rec_features
 
-tab <- rec_features %>%
+# bring in tax revenue change as a recession feature ---
+rec_taxdetail <- vbase %>%
+  filter(stabbr!="US", realnom=="real", name %in% c("tottax", "iit", "gst")) %>%
+  select(stabbr, name, year, value) %>%
+  arrange(stabbr, name, year) %>%
+  group_by(stabbr, name) %>%
+  mutate(taxpre = slide_dbl(value, ~max(.x, na.rm=TRUE), .before=2, .after=1),
+         taxpost = slide_dbl(value, ~min(.x, na.rm=TRUE), .before=0, .after=4),
+         taxchange=taxpost / taxpre - 1)
+
+# get the median tax change for each recession, across states, for each tax
+rec_taxmdn <- rec_taxdetail %>%
+  filter(year %in% rec_features$recyear) %>%
+  select(stabbr, name, recyear=year, taxchange) %>%
+  group_by(name, recyear) %>%
+  summarise(taxchange=median(taxchange, na.rm=TRUE), .groups="drop") %>%
+  pivot_wider(values_from = taxchange) %>%
+  filter(recyear != 2020) %>%
+  select(recyear, tottax, iit, gst)
+
+# enhance rec_features with tax change
+rec_features2 <- rec_features %>%
+  left_join(rec_taxmdn, by="recyear")
+
+
+tab <- rec_features2 %>%
+  select(-gst) %>%
   gt() %>%
   tab_header(
     title = "Selected characteristics of the last 8 recessions"
@@ -1076,19 +1160,22 @@ tab <- rec_features %>%
   cols_label(recyear=html("Initial year of<br>the recession"),
              duration=html("Duration<br>(months)"),
              rgdp=html("Real GDP"),             
-             rpce=html("Real personal consumption"),
+             rpce=html("Real personal<br>consumption"),
              urchange=html("Unemployment rate<br>% point change"),
-             cgpch=html("% change in<br>capital gains")) %>%
+             cgpch=html("% change in<br>national<br>capital gains"),
+             tottax=html("Total taxes"),
+             iit=html("Individual<br>income tax")) %>%
   tab_spanner(
     label = "% change, recession peak to trough:",
     columns = c(rgdp, rpce)
     ) %>%
   fmt_percent(
-    columns = c(rgdp, rpce, urchange, cgpch),
+    columns = c(rgdp, rpce, urchange, cgpch, tottax, iit),
     decimals = 1) %>%
   fmt_number(
     columns = c(duration),
     decimals = 0) %>%
+  fmt_missing(columns=c(tottax, iit)) %>%
   tab_footnote(
     footnote = "Highest quarterly value within 1 year of start minus lowest value within 2 years of trough.",
     locations = cells_column_labels(columns = urchange)
@@ -1097,18 +1184,21 @@ tab <- rec_features %>%
     footnote = "% change from highest annual value within two years of start to lowest value in 2 years after start.",
     locations = cells_column_labels(columns = cgpch)
     ) %>%
+  # tab_footnote(
+  #   footnote = "Extensions of tax-payment dates made the decline appear worse than it was.",
+  #   locations = cells_body(columns = taxchange, rows=recyear==2020)
+  #   ) %>%
   tab_style(
     style = list(
       cell_fill(color = "grey95")
       ),
     locations = cells_body(
-      rows=is.even(1:nrow(rec_features))
+      rows=is.even(1:nrow(rec_features2))
       )
     )
 tab
 
 savetab("tab_rec_features", .tabdata=rec_features)
-
 
 ```
 
@@ -1121,95 +1211,10 @@ volall <- readRDS(here::here("data", "volall.rds"))
 
 ```
 
-## make some maps
-```{r}
-glimpse(volall)
-pdata1 <- volall %>%
-  filter(period=="1970-2020", realnom=="nominal", stabbr %in% stdc, name=="tottax") %>%
-  select(stabbr, pchiqr)
-quantile(pdata1$pchiqr)
-
-pdata2 <- pdata1 %>%
-  mutate(vcut=cut(pchiqr, 
-                  breaks=c(-Inf, .05, .06, .07, .1, Inf)))
-count(pdata2, vcut)
-
-mdata <- states51 %>%
-  left_join(pdata2, by="stabbr")
-
-
-m <- mdata %>%
-  ggplot(aes(x = long, y = lat, group = group, fill = vcut)) +
-  geom_polygon(color = "gray90", size = 0.1) +
-  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
-  scale_fill_brewer(palette = "PuBu", na.translate = FALSE) +
-  theme_map()
-m + 
-  theme(legend.position = "right") +
-  legend_notitle
-
-theme_map <- function(base_size=9, base_family="") {
-  # see:
-  # https://socviz.co/maps.html
-  # https://github.com/kjhealy/socviz
-  require(grid)
-  theme_bw(base_size=base_size, base_family=base_family) %+replace%
-    theme(axis.line=element_blank(),
-          axis.text=element_blank(),
-          axis.ticks=element_blank(),
-          axis.title=element_blank(),
-          panel.background=element_blank(),
-          panel.border=element_blank(),
-          panel.grid=element_blank(),
-          panel.spacing=unit(0, "lines"),
-          plot.background=element_blank(),
-          legend.justification = c(0,0),
-          legend.position = c(0,0)
-    )
-}
-
-theme_map2 <- function(scale = "continuous",
-                            base_size = 8.5,
-                            base_family = "Lato",
-                            base_line_size = 0.5,
-                            base_rect_size = 0.5) {
-
-  gg <- theme_urbn_print(base_size = base_size,
-                         base_family = base_family,
-                         base_line_size = base_line_size,
-                         base_rect_size = base_rect_size)
-
-  gg <- gg +  ggplot2::theme(
-
-      # make changes for mapping styles
-      axis.text = ggplot2::element_blank(),
-      axis.ticks = ggplot2::element_blank(),
-      axis.title = ggplot2::element_blank(),
-      panel.grid = ggplot2::element_blank(),
-      axis.line = ggplot2::element_blank(),
-      legend.margin = ggplot2::margin(t = 6L, r = 6L, b = 6L, l = 6L, "pt")
-    )
-
-  if (scale == "continuous") {
-    gg <- gg + ggplot2::theme(
-      legend.position = "right",
-      legend.direction = "vertical",
-      legend.title = ggplot2::element_text(size = base_size)
-    )
-  }
-  # return gg
-  gg
-}
-
-```
-
-
-
-
 ## Nominal tax vs GDP, % change
 
 ```{r eval=TRUE, include=TRUE}
-df <- censustax %>%
+pdata <- censustax %>%
   filter(stabbr=="US", name=="tottax") %>%
   select(year, tax=value) %>%
   inner_join(gdpfy, by="year") %>%
@@ -1217,12 +1222,12 @@ df <- censustax %>%
   group_by(name) %>%
   mutate(pch=pchya(value, year)) %>%
   ungroup
+summary(pdata)
 
-recs <- recdata(1953)
-
-p <- df %>%
-  # filter(year >= 1970) %>%
+p <- pdata %>%
   ggplot(aes(year, pch, colour=name)) +
+  # put recession bands down before lines and dots
+  geom_band(recdata(unique(pdata$year))) +
   geom_line() +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -1231,7 +1236,6 @@ p <- df %>%
                      breaks=seq(-.20, .20, .02),
                      labels=label_percent(accuracy=.1)) +
   scale_color_manual(values=bluered) +
-  gband(recs$peak_decimal, recs$trough_decimal) +
   ggtitle("State Government Tax Revenue and Gross Domestic Product, United States") +
   theme_report +
   legend_notitle
@@ -1240,6 +1244,38 @@ ggsave(filename = here::here("results", "gdp_tax_us.png"),
        plot = p, width=8, height=6)
 
 ```
+
+# versus trend
+```{r}
+pdata <- volfull %>%
+  filter(name %in% c("tottax", "gdp"), realnom=="nominal", stabbr=="US") %>%
+  select(stabbr, name, data) %>%
+  unnest(data) %>%
+  select(stabbr, year, name, pdtrend)
+
+p <- pdata %>%
+  # filter(year >= 1970) %>%
+  ggplot(aes(year, pdtrend, colour=name)) +
+  # put recession bands down before lines and dots
+  geom_band(recdata(unique(pdata$year))) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(name=NULL, breaks=seq(1950, 2030, 5)) +
+  scale_y_continuous(name="percent",
+                     breaks=seq(-.20, .20, .02),
+                     labels=label_percent(accuracy=1)) +
+  scale_color_manual(values=bluered) +
+  ggtitle("State Government Tax Revenue and Gross Domestic Product, United States",
+          "Percent difference from trend") +
+  theme_report +
+  legend_notitle
+p 
+ggsave(filename = here::here("results", "fig_gdptax_us_pdtrend.png"),
+       plot = p, width=8, height=6)
+
+```
+
 
 ## Inflation and Nominal tax % change
 
@@ -1282,6 +1318,226 @@ ggsave(filename = here::here("results", "gdppi_tax_us.png"),
 ```
 
 # HOW SHOULD WE MEASURE VOLATILITY?
+
+## Alternative volatility measures with made-up data
+
+```{r volatile_data}
+set.seed(33)  
+# 15 best so far
+# 12 some long negatives -- rand much more vol w/pchsd
+# 1234 a little too uniform
+# 4 quite good
+# 14 pretty good
+# 28 very good
+
+# create data with different kinds of volatility
+nyears <- 30
+time <- 0:(nyears - 1)
+grate <- .03
+init <- 100
+trend <- init * (1 + grate)^time
+nturns <- 6
+x <- seq(0, 1, length.out = nyears)
+sinx <- sin(nturns * pi * x)
+# plot(sinx)
+
+(noise_prop <- c(0, rnorm(nyears - 1, mean=0, sd=.075)))
+cycle_size <- .1
+mud <- tibble(time=time) %>%
+  mutate(trend=trend, 
+         cycle=trend * (1 + sinx * cycle_size),
+         cycle=cycle * sum(trend) / sum(cycle),
+         random=trend * (1 + noise_prop),
+         random=random * sum(trend) / sum(random))
+
+mud %>% summarise(across(c(trend, cycle, random), sum))
+
+
+# create long version of made-up data
+mudl <- mud %>%
+  pivot_longer(-time) %>%
+  group_by(name) %>%
+  mutate(pch=value / value[match(time - 1, time)] - 1) %>%
+  group_by(time) %>%
+  mutate(pdtrend=value / value[name=="trend"] - 1) %>%
+  ungroup
+
+mudl
+max(abs(mudl$pch), na.rm=TRUE)
+max(mudl$pch, na.rm=TRUE)
+min(mudl$pch, na.rm=TRUE)
+
+mudl %>%
+  filter(name=="cycle")
+
+mudl %>%
+  filter(name=="random")
+
+mudl %>% 
+  group_by(name) %>% 
+  summarise(across(c(value, pch, pdtrend), 
+                   list(mean=~mean(.x, na.rm=TRUE),
+                        min=~min(.x, na.rm=TRUE),
+                        max=~max(.x, na.rm=TRUE))))
+```
+
+## Random and cyclical fluctuation
+
+```{r fig_trend_cycle_random, eval=TRUE, include=TRUE}
+
+colors = c("black", "blue")
+
+# levels
+p1 <- mudl %>%
+  filter(name %in% c("trend", "random")) %>%
+  mutate(name=factor(name, levels=c("trend", "random"))) %>%  # to get right sort order
+  ggplot(aes(time, value, colour=name)) +
+  geom_line() +
+  geom_hline(yintercept = 100) +
+  scale_y_continuous(name="$ revenue", limits=c(90, 265), labels=scales::dollar) +
+  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
+  scale_colour_manual(values=colors) +
+  ggtitle("Random revenue fluctuations",
+          subtitle="Annual amount of revenue") +
+  theme_report +
+  legend_notitle
+p1
+
+# percent change
+p2 <- mudl %>%
+  filter(name %in% c("trend", "random")) %>%
+  mutate(name=factor(name, levels=c("trend", "random"))) %>%  # to get right sort order
+  ggplot(aes(time, pch, colour=name)) +
+  geom_line() +
+  geom_hline(yintercept = 0, colour="grey") +
+  scale_y_continuous(name="% change", 
+                     breaks=seq(-.5, .5, .1),
+                     limits=c(-.3, .3), 
+                     labels=scales::percent_format(accuracy=1)) +
+  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
+  scale_colour_manual(values=colors) +
+  ggtitle("Random revenue fluctuations",
+          subtitle="Annual percent change") +
+  theme_report +
+  legend_notitle
+p2
+
+# % diff from trend
+p3 <- mudl %>%
+  filter(name=="random") %>%
+  mutate(posneg=ifelse(pdtrend < 0, "neg", "pos")) %>%
+  ggplot(aes(time, pdtrend)) +
+  geom_hline(yintercept = 0) +
+  geom_bar(stat = "identity", aes(fill = posneg)) + 
+  scale_fill_manual(values=rev(bluered)) +
+  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
+  scale_y_continuous(name="% difference from trend",
+                     breaks=seq(-.2, .2, .05), 
+                     labels=scales::percent_format(accuracy=1),
+                     limits=c(-.2, .2)) +
+  ggtitle("Random revenue fluctuations",
+          subtitle="Percent difference from trend") +
+  theme_report +
+  legend_none
+p3
+
+
+p123 <- p1 / p2 / p3
+p123
+# ggsave(filename = here::here("results", "trend_random_3panel.png"), plot = p123, width=8, height=8)
+
+# Cyclical variation
+
+# levels
+p4 <- mudl %>%
+  filter(name %in% c("trend", "cycle")) %>%
+  mutate(name=factor(name, levels=c("trend", "cycle"))) %>%
+  ggplot(aes(time, value, colour=name)) +
+  geom_line() +
+  geom_hline(yintercept = 100) +
+  scale_y_continuous(name="$ revenue", limits=c(90, 265), labels=scales::dollar) +
+  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
+  scale_colour_manual(values=colors) +
+  ggtitle("Cyclical revenue fluctuations",
+          subtitle = "Annual amount of revenue") +
+  theme_report +
+  legend_notitle
+p4
+
+# percent change
+p5 <- mudl %>%
+  filter(name %in% c("trend", "cycle")) %>%
+  mutate(name=factor(name, levels=c("trend", "cycle"))) %>%  # to get right sort order
+  ggplot(aes(time, pch, colour=name)) +
+  geom_line() +
+  geom_hline(yintercept = 0, colour="grey") +
+  scale_y_continuous(name="% change", 
+                     breaks=seq(-.5, .5, .1),
+                     limits=c(-.3, .3), 
+                     labels=scales::percent_format(accuracy=1)) +
+  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
+  scale_colour_manual(values=colors) +
+  ggtitle("Cyclical revenue fluctuations",
+          subtitle = "Annual percent change") +
+  theme_report +
+  legend_notitle
+p5
+
+# % diff from trend
+p6 <- mudl %>%
+  filter(name=="cycle") %>%
+  mutate(posneg=ifelse(pdtrend < 0, "neg", "pos")) %>%
+  ggplot(aes(time, pdtrend)) +
+  geom_hline(yintercept = 0) +
+  geom_bar(stat = "identity", aes(fill = posneg)) + 
+  scale_fill_manual(values=rev(bluered)) +
+  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
+  scale_y_continuous(name="% difference from trend",
+                     breaks=seq(-.2, .2, .05), 
+                     labels=scales::percent_format(accuracy=1),
+                     limits=c(-.2, .2)) +
+  ggtitle("Cyclical revenue fluctuations",
+          subtitle="Percent difference from trend") +
+  theme_report +
+  legend_none
+p6
+
+p456 <- p4 / p5 / p6
+
+p456
+# ggsave(filename = here::here("results", "trend_cycle_3panel.png"), plot = p456, width=8, height=8)
+
+p7 <- p123 | p456
+p7
+ggsave(filename = here::here("results", "fig_trend_cycle_random.png"),
+       plot = p7, width=8, height=8, scale=1)
+
+```
+
+
+```{r vol_measured}
+
+vmudl <- mudl %>%
+  filter(time > 0) %>%
+  group_by(name) %>%
+  summarise(pchsd = sd(pch, na.rm=TRUE),
+            pdtsd = sd(pdtrend, na.rm=TRUE))
+
+vmudl %>% 
+  kbl(format="html", digits=2)
+
+mudl %>%
+  filter(time > 0) %>%
+  group_by(name) %>%
+  nest() %>%
+  mutate(epi = purrr::map(data, function(df) episodes(df$pdtrend))) %>%
+  unnest_wider(col=epi) %>%
+  mutate(esum=esum) %>% 
+  select(-data) %>%
+  kbl(format="html", digits=2)
+
+```
+
 
 
 # HOW DOES VOLATILITY VARY BY TAX?
@@ -1959,6 +2215,192 @@ df3 %>%
 ```
 
 
+```{r fig_iit_cg_states}
+soiall
+count(soiall, vname) # netcgll
+count(soiall, year)
+# incgrp all
+censustax %>%
+  filter(name=="iit", year==max(year)) %>%
+  mutate(share=value / value[stabbr=="US"]) %>%
+  filter(stabbr!="US") %>%
+  arrange(desc(share))
+
+cgpct <- soiall %>%
+  filter(year==2007, vname %in% c("netcgll", "agi"), incgrp=="all") %>%
+  pivot_wider(names_from=vname) %>%
+  mutate(cgpct=netcgll / agi)
+summary(cgpct)
+cgpct %>% arrange(desc(cgpct))
+
+iitvol2010 <- volall %>%
+  filter(period=="2000-2009", realnom=="nominal", name=="iit") %>%
+  select(stabbr, pchiqr, pdtrendiqr, sre) %>%
+  pivot_longer(-stabbr) %>%
+  left_join(cgpct %>% 
+              filter(stabbr %in% c("US", state.abb)) %>% 
+              select(stabbr, cgpct), by="stabbr")
+
+p <- iitvol2010 %>%
+  ggplot(aes(cgpct, value)) +
+  geom_point(colour="blue") +
+  geom_text(aes(label=stabbr)) +
+  facet_wrap(~name, scales="free", ncol=1)
+p
+
+var <- "pdtrendiqr"
+var <- "sre"
+var <- "pchiqr"
+p <- pdata %>%
+  filter(name==var) %>%
+  filter(stabbr!="TN") %>%
+  ggplot(aes(cgpct, value)) +
+  geom_point(colour="blue") +
+  geom_text_repel(aes(label=stabbr),
+                    hjust=0, nudge_x = .001) +                                     
+  stat_smooth(method = "lm",
+              formula = y ~ x,
+              geom = "smooth") +
+  ggtitle(var) +
+  theme_report
+p
+
+cgtr1 <- read_csv(
+"stname, cgtr
+California, 13.3
+New York, 8.8
+Oregon, 9.9
+Minnesota, 9.9
+New Jersey, 9.0
+Vermont, 9.0
+Maryland, 5.8
+Maine, 8.0
+Iowa, 9.0
+Idaho, 7.4
+Hawaii, 7.3
+Nebraska, 6.8
+Connecticut, 6.7
+Delaware, 6.6
+West Virginia, 6.5
+Georgia, 6.0
+Kentucky, 6.0
+Missouri, 6.0
+Rhode Island, 6.0
+North Carolina, 5.8
+Virginia, 5.8
+Ohio, 5.4
+Wisconsin, 7.7
+Oklahoma, 5.3
+Massachusetts, 5.2
+Illinois, 5.0
+Mississippi, 5.0
+Utah, 5.0
+Arkansas, 7.0
+Montana, 6.9
+Louisiana, 6.0
+Kansas, 4.8
+Indiana, 3.4
+Michigan, 4.4
+Colorado, 4.6
+Arizona, 4.5
+Alabama, 5.0
+South Carolina, 7.0
+Pennsylvania, 3.1
+New Mexico, 4.9
+North Dakota, 3.2
+Tennessee, 0.0
+New Hampshire, 0.0
+Alaska, 0.0
+Florida, 0.0
+Nevada, 0.0
+South Dakota, 0.0
+Texas, 0.0
+Washington, 0.0
+Wyoming, 0.0")
+cgtr1
+cgtr <- cgtr1 %>%
+  mutate(stabbr=state.abb[match(stname, state.name)],
+         cgtr=cgtr / 100) %>%
+  select(stabbr, stname, cgtr)
+cgtr
+
+cgtr %>%
+  filter(cgtr > 0) %>%
+  mutate(cgtrmdn=cgtr / median(cgtr) - 1) %>%
+  arrange(desc(cgtr))
+
+cgpct2014 <- soiall %>%
+  filter(year==2014, vname %in% c("netcgll", "agi"),
+         incgrp=="all", stabbr %in% c(state.abb, "US")) %>%
+  pivot_wider(names_from=vname) %>%
+  mutate(cgpct=netcgll / agi,
+         cgshareus=netcgll / netcgll[stabbr=="US"])
+
+cgpct2014 %>%
+  arrange(desc(cgpct))
+
+
+pdata1 <- iitvol2010 %>% 
+  filter(name=="pchiqr") %>% 
+  select(stabbr, pchiqr=value, cgpct) %>%
+  left_join(cgtr, by="stabbr")
+
+p1 <- pdata1 %>%
+  ggplot(aes(cgpct, cgtr)) +
+  geom_point(aes(size=pchiqr), colour="blue") +
+  geom_text_repel(aes(label=stabbr),
+                    hjust=0, nudge_x = .001) +
+  geom_hline(aes(yintercept = median(cgtr))) +
+  geom_vline(aes(xintercept = median(cgpct))) +
+  ggtitle("abc") +
+  theme_report
+p1
+
+var <- "pdtrendiqr"
+var <- "sre"
+var <- "pchiqr"
+pdata %>%
+  filter(name==var) %>%
+  filter(stabbr!="TN") %>%
+  ggplot(aes(cgpct, value)) +
+  geom_point(colour="blue") +
+  geom_text_repel(aes(label=stabbr),
+                    hjust=0, nudge_x = .001) +                                     
+  stat_smooth(method = "lm",
+              formula = y ~ x,
+              geom = "smooth") +
+  ggtitle(var) +
+  theme_report
+
+iitvol <- vbase %>%
+  filter(year %in% 2000:2020, name %in% c("iit", "gdp") , realnom=="nominal") %>%
+  group_by(stabbr, name) %>%
+  summarise(growthmdn=median(pch, na.rm=TRUE),
+            pdtrendiqr=IQR(pdtrend, na.rm=TRUE),
+            pchiqr=IQR(pch, na.rm=TRUE), .groups="drop")
+
+df <- iitvol %>%
+  select(stabbr, name, value=pdtrendiqr) %>%
+  pivot_wider() %>%
+  left_join(cgpct2014 %>% select(stabbr, cgpct), by="stabbr") %>%
+  left_join(cgtr %>% select(stabbr, cgtr), by="stabbr") %>%
+  na.omit()
+df
+mod <- lm(iit ~ gdp + cgpct + cgtr, data=df)
+summary(mod)
+
+volall %>%
+  filter(period=="2000-2009", realnom=="nominal", name=="iit") %>%
+  select(stabbr, pchiqr, pdtrendiqr, sre) %>%
+  pivot_longer(-stabbr) %>%
+  left_join(cgpct %>% 
+              filter(stabbr %in% c("US", state.abb)) %>% 
+              select(stabbr, cgpct), by="stabbr")
+
+
+```
+
+
 ## General sales tax
 ## Selective sales taxes
 ## Corporate income tax
@@ -1989,8 +2431,8 @@ p + geom_polygon(color = "gray90", size = 0.1) +
     guides(fill = "none")
 
 # https://github.com/UrbanInstitute/urbnmapr
-devtools::install_github("UrbanInstitute/urbnmapr")
-library(urbnmapr)
+# devtools::install_github("UrbanInstitute/urbnmapr")
+# library(urbnmapr)
 library(sf)
 
 states_sf <- get_urbn_map("states", sf = TRUE)
@@ -2111,14 +2553,16 @@ tmp %>% arrange(-value)
 #.. using all state data ----
 keep <- c("C105", "T40", "T09", "T41", "T13", "T19", "T24", "T12", "T01", "T16", "T28", "T15")
 pdata1 <- sgtax.a %>%
-  filter(year >= 1999, item %in% keep, stabbr!="US") %>%
-  mutate(name=str_extract_before_first(desc, "(") %>% str_trim()) %>%
-  select(stabbr, name, year, value) %>%
-  arrange(stabbr, name, year) %>%
-  group_by(stabbr, name) %>%
+  filter(year >= 1999, item %in% keep) %>%
+  mutate(group=ifelse(stabbr=="US", "US", "pooled"),
+         name=str_extract_before_first(desc, "(") %>% str_trim()) %>%
+  select(group, stabbr, name, year, value) %>%
+  arrange(group, stabbr, name, year) %>%
+  group_by(group, stabbr, name) %>%
   mutate(pch=pchya(value, year)) %>%
-  filter(!is.na(pch)) %>%
-  group_by(name) %>%
+  filter(year >= 2000) %>%
+  # filter(!is.na(pch)) %>%
+  group_by(group, name) %>%
   summarise(n=n(),
             growthmdn=median(pch, na.rm=TRUE),
             pchiqr=IQR(pch, na.rm=TRUE),
@@ -2128,6 +2572,7 @@ pdata1
 pdata <- pdata1
 
 p <- pdata %>%
+  filter(group=="pooled") %>%
   arrange(pchiqr, growthmdn) %>%
   mutate(eff=eff(pchiqr, growthmdn)) %>%
   ggplot(aes(pchiqr, growthmdn)) +
@@ -2136,12 +2581,36 @@ p <- pdata %>%
   geom_line(color="blue", data=. %>% filter(eff)) +
   labs(x="Volatility (IQR of % change)",
        y="Growth (median growth rate across years)",
-       title=) +
+       title="Growth and volatility of selected state tax revenue sources: The potentially efficient frontier",
+       subtitle="2000-2020, pooled data for all states") +
   theme_report +
-  scale_x_continuous(labels=label_percent(accuracy=1), limits=c(0, NA)) +
-  scale_y_continuous(labels=label_percent(accuracy=1), limits=c(0, NA))
-
+  scale_x_continuous(labels=label_percent(accuracy=.1), breaks=seq(0, 1, .025), limits=c(0, NA)) +
+  scale_y_continuous(labels=label_percent(accuracy=1), breaks=seq(0, 1, .01), limits=c(0, NA))
 p
+savefig("fig_eff_taxes_pooled", .p=p, .pdata=pdata, width=8, height=6, scale=1)
+
+
+
+p <- pdata %>%
+  filter(group=="US") %>%
+  arrange(pchiqr, growthmdn) %>%
+  mutate(eff=eff(pchiqr, growthmdn)) %>%
+  ggplot(aes(pchiqr, growthmdn)) +
+  # put the line down before points and text
+  geom_line(color="blue", data=. %>% filter(eff)) +
+  geom_point(size=.75) +
+  geom_text_repel(aes(label=str_wrap(name, 10)), size=2) +
+  labs(x="Volatility (IQR of % change)",
+       y="Growth (median growth rate across years)",
+       title="Growth and volatility of selected state tax revenue sources: The potentially efficient frontier",
+       subtitle="2000-2020, based on United States totals") +
+  theme_report +
+  scale_x_continuous(labels=label_percent(accuracy=.1), breaks=seq(0, 1, .025), limits=c(0, NA)) +
+  scale_y_continuous(labels=label_percent(accuracy=1), breaks=seq(0, 1, .01), limits=c(0, NA))
+p
+savefig("fig_eff_taxes_us", .p=p, .pdata=pdata, width=8, height=6, scale=1)
+
+
 # efficient
 
 pdata <- volall %>%
@@ -2202,7 +2671,7 @@ p <- pdata %>%
   geom_line(color="blue", data=. %>% filter(eff)) +
   labs(x="Volatility (IQR of % change)",
        y="Growth (median growth rate across years)",
-       title="State tax revenue growth vs. volatility: The potentially efficient frontier",
+       title="Growth and volatility of tax revenue across states: The potentially efficient frontier",
        subtitle="2000-2020") +
   theme_report
 p
@@ -2215,6 +2684,12 @@ savefig("fig_eff_states", .p=p, .pdata=pdata, width=8, height=6, scale=1)
 
 ```
 
+
+```{r correlations}
+vbase
+
+
+```
 
 
 # HOW DOES VOLATILITY VARY ACROSS STATES?
@@ -2306,223 +2781,6 @@ summary(mod)
 
 
 # COME BACK TO THE ITEMS BELOW
-## Alternative volatility measures with made-up data
-
-```{r volatile_data}
-set.seed(33)  
-# 15 best so far
-# 12 some long negatives -- rand much more vol w/pchsd
-# 1234 a little too uniform
-# 4 quite good
-# 14 pretty good
-# 28 very good
-
-# create data with different kinds of volatility
-nyears <- 30
-time <- 0:(nyears - 1)
-grate <- .03
-init <- 100
-trend <- init * (1 + grate)^time
-nturns <- 6
-x <- seq(0, 1, length.out = nyears)
-sinx <- sin(nturns * pi * x)
-# plot(sinx)
-
-(noise_prop <- c(0, rnorm(nyears - 1, mean=0, sd=.075)))
-cycle_size <- .1
-mud <- tibble(time=time) %>%
-  mutate(trend=trend, 
-         cycle=trend * (1 + sinx * cycle_size),
-         cycle=cycle * sum(trend) / sum(cycle),
-         random=trend * (1 + noise_prop),
-         random=random * sum(trend) / sum(random))
-
-mud %>% summarise(across(c(trend, cycle, random), sum))
-
-
-# create long version of made-up data
-mudl <- mud %>%
-  pivot_longer(-time) %>%
-  group_by(name) %>%
-  mutate(pch=value / value[match(time - 1, time)] - 1) %>%
-  group_by(time) %>%
-  mutate(pdtrend=value / value[name=="trend"] - 1) %>%
-  ungroup
-
-mudl
-max(abs(mudl$pch), na.rm=TRUE)
-max(mudl$pch, na.rm=TRUE)
-min(mudl$pch, na.rm=TRUE)
-
-mudl %>%
-  filter(name=="cycle")
-
-dfl %>%
-  filter(name=="random")
-
-mudl %>% 
-  group_by(name) %>% 
-  summarise(across(c(value, pch, pdtrend), 
-                   list(mean=~mean(.x, na.rm=TRUE),
-                        min=~min(.x, na.rm=TRUE),
-                        max=~max(.x, na.rm=TRUE))))
-```
-
-## Random and cyclical fluctuation
-
-```{r random_cycle, eval=TRUE, include=TRUE}
-
-colors = c("black", "blue")
-
-# levels
-p1 <- mudl %>%
-  filter(name %in% c("trend", "random")) %>%
-  mutate(name=factor(name, levels=c("trend", "random"))) %>%  # to get right sort order
-  ggplot(aes(time, value, colour=name)) +
-  geom_line() +
-  geom_hline(yintercept = 100) +
-  scale_y_continuous(name="$ revenue", limits=c(90, 265), labels=scales::dollar) +
-  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
-  scale_colour_manual(values=colors) +
-  ggtitle("Random revenue fluctuations",
-          subtitle="Annual amount of revenue") +
-  theme_report +
-  legend_notitle
-p1
-
-# percent change
-p2 <- mudl %>%
-  filter(name %in% c("trend", "random")) %>%
-  mutate(name=factor(name, levels=c("trend", "random"))) %>%  # to get right sort order
-  ggplot(aes(time, pch, colour=name)) +
-  geom_line() +
-  geom_hline(yintercept = 0, colour="grey") +
-  scale_y_continuous(name="% change", 
-                     breaks=seq(-.5, .5, .1),
-                     limits=c(-.3, .3), 
-                     labels=scales::percent_format(accuracy=1)) +
-  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
-  scale_colour_manual(values=colors) +
-  ggtitle("Random revenue fluctuations",
-          subtitle="Annual percent change") +
-  theme_report +
-  legend_notitle
-p2
-
-# % diff from trend
-p3 <- mudl %>%
-  filter(name=="random") %>%
-  mutate(posneg=ifelse(pdtrend < 0, "neg", "pos")) %>%
-  ggplot(aes(time, pdtrend)) +
-  geom_hline(yintercept = 0) +
-  geom_bar(stat = "identity", aes(fill = posneg)) + 
-  scale_fill_manual(values=rev(bluered)) +
-  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
-  scale_y_continuous(name="% difference from trend",
-                     breaks=seq(-.2, .2, .05), 
-                     labels=scales::percent_format(accuracy=1),
-                     limits=c(-.2, .2)) +
-  ggtitle("Random revenue fluctuations",
-          subtitle="Percent difference from trend") +
-  theme_report +
-  legend_none
-p3
-
-
-p123 <- p1 / p2 / p3
-p123
-# ggsave(filename = here::here("results", "trend_random_3panel.png"), plot = p123, width=8, height=8)
-
-# Cyclical variation
-
-# levels
-p4 <- mudl %>%
-  filter(name %in% c("trend", "cycle")) %>%
-  mutate(name=factor(name, levels=c("trend", "cycle"))) %>%
-  ggplot(aes(time, value, colour=name)) +
-  geom_line() +
-  geom_hline(yintercept = 100) +
-  scale_y_continuous(name="$ revenue", limits=c(90, 265), labels=scales::dollar) +
-  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
-  scale_colour_manual(values=colors) +
-  ggtitle("Cyclical revenue fluctuations",
-          subtitle = "Annual amount of revenue") +
-  theme_report +
-  legend_notitle
-p4
-
-# percent change
-p5 <- mudl %>%
-  filter(name %in% c("trend", "cycle")) %>%
-  mutate(name=factor(name, levels=c("trend", "cycle"))) %>%  # to get right sort order
-  ggplot(aes(time, pch, colour=name)) +
-  geom_line() +
-  geom_hline(yintercept = 0, colour="grey") +
-  scale_y_continuous(name="% change", 
-                     breaks=seq(-.5, .5, .1),
-                     limits=c(-.3, .3), 
-                     labels=scales::percent_format(accuracy=1)) +
-  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
-  scale_colour_manual(values=colors) +
-  ggtitle("Cyclical revenue fluctuations",
-          subtitle = "Annual percent change") +
-  theme_report +
-  legend_notitle
-p5
-
-# % diff from trend
-p6 <- mudl %>%
-  filter(name=="cycle") %>%
-  mutate(posneg=ifelse(pdtrend < 0, "neg", "pos")) %>%
-  ggplot(aes(time, pdtrend)) +
-  geom_hline(yintercept = 0) +
-  geom_bar(stat = "identity", aes(fill = posneg)) + 
-  scale_fill_manual(values=rev(bluered)) +
-  scale_x_continuous(name="year", breaks=seq(0, 40, 5), limits=c(0, 32)) +
-  scale_y_continuous(name="% difference from trend",
-                     breaks=seq(-.2, .2, .05), 
-                     labels=scales::percent_format(accuracy=1),
-                     limits=c(-.2, .2)) +
-  ggtitle("Cyclical revenue fluctuations",
-          subtitle="Percent difference from trend") +
-  theme_report +
-  legend_none
-p6
-
-p456 <- p4 / p5 / p6
-
-p456
-# ggsave(filename = here::here("results", "trend_cycle_3panel.png"), plot = p456, width=8, height=8)
-
-p7 <- p123 | p456
-p7
-ggsave(filename = here::here("results", "trend_cycle_random.png"),
-       plot = p7, width=8, height=8, scale=1)
-
-```
-
-```{r vol_measured}
-
-vmudl <- mudl %>%
-  filter(time > 0) %>%
-  group_by(name) %>%
-  summarise(pchsd = sd(pch, na.rm=TRUE),
-            pdtsd = sd(pdtrend, na.rm=TRUE))
-
-vmudl %>% 
-  kbl(format="html", digits=2)
-
-mudl %>%
-  filter(time > 0) %>%
-  group_by(name) %>%
-  nest() %>%
-  mutate(epi = purrr::map(data, function(df) episodes(df$pdtrend))) %>%
-  unnest_wider(col=epi) %>%
-  mutate(esum=esum) %>% 
-  select(-data) %>%
-  kbl(format="html", digits=2)
-
-```
 
 ## Reserve fund example
 
@@ -4322,15 +4580,18 @@ anno <- cgtax %>%
   filter(stabbr=="US") %>%
   mutate(cggdp=cggdp / 100)
 
+recs <- recdata(unique(cgtax$year))
+
 p <- cgtax %>%
   filter(stabbr=="US") %>%
   select(year, cggdp) %>%
   ggplot(aes(year, cggdp / 100)) +
+  # put recession bands down before lines and dots
+  geom_band(recs) +
   geom_point(colour="blue") +
   geom_line(colour="blue") +
   scale_y_continuous(name="% of GDP", labels=scales::percent_format(accuracy = .1), limits=c(0, NA)) +
   scale_x_continuous(name=NULL, breaks=seq(1950, 2030, 5)) +
-  gband(rec$peak_decimal, rec$trough_decimal) +
   geom_hline(aes(yintercept=median(cggdp, na.rm=TRUE) / 100)) +
   annotate("text", x=1955, y=median(anno$cggdp, na.rm=TRUE) +.001, label = "median", size=2.5) +
   annotate("text", x=1987, y=.0765, label = "Federal\ntax reform", size=2.5) +

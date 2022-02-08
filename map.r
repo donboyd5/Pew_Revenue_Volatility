@@ -1,10 +1,10 @@
 
 # new -----
 library(ggplot2)
-devtools::install_github("wmurphyrd/fiftystater")
-library(fiftystater)
+# devtools::install_github("wmurphyrd/fiftystater")
+# library(fiftystater)
 
-data("fifty_states") # this line is optional due to lazy data loading
+# data("fifty_states") # this line is optional due to lazy data loading
 
 crimes <- data.frame(state = tolower(rownames(USArrests)), USArrests)
 

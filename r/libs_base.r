@@ -72,6 +72,7 @@ fredr_set_key(fred_apikey)
 
 # Boyd libraries ----
 library(bdata)
+library(bmaps)
 library(btools)
 library(BEAData)
 library(BLSdata)

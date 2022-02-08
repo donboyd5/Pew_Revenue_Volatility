@@ -529,3 +529,137 @@ tmp <- volall %>%
   unnest(data)
 
 
+tmp <- volrecs %>%
+  filter(stabbr=="ND", realnom=="nominal", recyear==2007, name %in% c("gdp", "tottax", "iit")) %>%
+  select(stabbr, name, period, data, sre, growthmdn, pdtrendiqr, pchiqr, sre)
+
+tmp %>%
+  filter(name=="tottax") %>%
+  unnest(data)
+
+volrecs %>%
+  filter(stabbr=="CA", realnom=="nominal", recyear==2007, name %in% c("gdp", "tottax", "iit")) %>%
+  select(stabbr, name, period, data, growthmdn, pdtrendiqr, pchiqr, sre) %>%
+  filter(name=="tottax") %>%
+  unnest(data)
+
+volrecs %>%
+  filter(stabbr=="ND", realnom=="nominal", name %in% c("tottax")) %>%
+  select(stabbr, name, period, data, growthmdn, pdtrendiqr, pchiqr, sre)
+
+volrecs %>%
+  filter(realnom=="nominal", recyear==2007, name %in% c("tottax")) %>%
+  select(stabbr, name, period, data, growthmdn, pdtrendiqr, pchiqr, sre) %>%
+  filter(pchiqr >= .082) %>%
+  arrange(growthmdn)
+  
+
+volrecs %>%
+  filter(stabbr=="CA", realnom=="real", recyear==2007, name %in% c("gdp", "tottax", "iit")) %>%
+  select(stabbr, name, period, data, growthmdn, pdtrendiqr, pchiqr, sre) %>%
+  filter(name=="tottax") %>%
+  unnest(data)
+
+# alternative volatility ----
+glimpse(vbase)
+altvol1 <- vbase %>%
+  filter(year %in% 2000:2020, name %in% taxnames$name, realnom=="nominal") %>%
+  select(stabbr, name, year, value, pch)
+altvol1 %>% filter(stabbr=="NY", name=="tottax")
+
+usshares <- altvol1 %>% 
+  filter(year==2010, stabbr=="US") %>%
+  mutate(usshare=value / value[name=="tottax"])
+usshares
+usshares %>%
+  filter(name != "tottax") %>%
+  summarise(ss=sum(usshare))
+usshares
+
+altvol2 <- altvol1 %>%
+  left_join(usshares %>%
+              select(name, usshare), by = "name") %>%
+  mutate(altval2000=ifelse(year==2000, value * usshare, NA_real_)) %>%
+  arrange(stabbr, name, year)
+
+altvol2 %>%
+  filter(stabbr=="WY")
+
+altvol3 <- altvol2 %>%
+  filter(!(stabbr=="AZ" & name %in% c("cit", "sevtax")),
+         !(stabbr=="CT" & name=="sevtax")) %>%
+  group_by(stabbr, name) %>%
+  mutate(cumpch=cumprod(1+pch),
+         cumpch2= cumpch / (1 + pch[year==2000]),
+         altval=altval2000[year==2000] * cumpch2) %>%
+  ungroup
+
+altvol3 %>%
+  filter(stabbr=="WY")
+
+altvol4 <- altvol3 %>%
+  filter(name != "tottax") %>%
+  group_by(stabbr, year) %>%
+  summarise(value=sum(value, na.rm=TRUE),
+            altval=sum(altval, na.rm=TRUE),
+            .groups="drop") %>%
+  arrange(stabbr, year) %>%
+  group_by(stabbr) %>%
+  mutate(pchval=pchya(value, year),
+         pchalt=pchya(altval, year)) %>%
+  ungroup
+
+
+altvol4 %>%
+  filter(stabbr=="NY") %>%
+  select(stabbr, year, pchval, pchalt) %>%
+  pivot_longer(-c(stabbr, year)) %>%
+  ggplot(aes(year, value, colour=name)) +
+  geom_line() +
+  geom_point()
+
+altvol4 %>%
+  group_by(stabbr) %>%
+  summarise(mdnpch=median(pchval, na.rm=TRUE),
+            mdnalt=median(pchalt, na.rm=TRUE),
+            pchiqr=IQR(pchval, na.rm=TRUE), 
+            altiqr=IQR(pchalt, na.rm=TRUE),
+            .groups="drop") %>%
+  mutate(change=(altiqr - pchiqr),
+         growchange=mdnalt - mdnpch) %>%
+  arrange(change)
+  
+  
+  
+voldecades
+
+volfull
+glimpse(volfull)
+count(volfull, stabbr)
+volfull %>%
+  filter(name %in% c("tottax", "gdp"), realnom=="nominal", stabbr=="US") %>%
+  select(stabbr, name, data) %>%
+  unnest(data) %>%
+  ggplot(aes(year, pdtrend, colour=name)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0)
+
+volfull %>%
+  filter(name %in% c("tottax", "iit", "gst"), realnom=="nominal", stabbr=="US") %>%
+  select(stabbr, name, data) %>%
+  unnest(data) %>%
+  ggplot(aes(year, pdtrend, colour=name)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0)
+
+volfull %>%
+  filter(name %in% c("iit", "capgains"), realnom=="nominal", stabbr=="US") %>%
+  select(stabbr, name, data) %>%
+  unnest(data) %>%
+  ggplot(aes(year, pdtrend, colour=name)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0)
+
