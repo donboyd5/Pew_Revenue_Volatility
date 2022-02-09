@@ -478,6 +478,8 @@ get_measures <- function(df){
 # vorder, taxnames
 stdc <- c(state.abb, "DC")
 (decades <- paste0(seq(1960, 2010, 10), "-", seq(1969, 2019, 10)))
+fullperiod <- "1970-2020"
+last20 <- "2000-2020"
 
 #.. colors ----
 # https://colorbrewer2.org/
@@ -844,7 +846,11 @@ f_vol <- function(startend, vars, vbase){
       # use median and IQR to calculate robust measures of growth and volatility
       growthmdn=median(pch, na.rm=TRUE),
       pdtrendiqr=IQR(pdtrend, na.rm=TRUE),
+      pdtrend25=p25(pdtrend), # p25 has , na.rm=TRUE
+      pdtrend75=p75(pdtrend),
       pchiqr=IQR(pch, na.rm=TRUE),
+      pch25=p25(pch),
+      pch75=p75(pch),
       dpchtrendiqr=IQR(dpchtrend, na.rm=TRUE),
       # standard deviation of growth - more traditional, lest robust
       pchsd=sd(pch, na.rm=TRUE),
@@ -1073,13 +1079,14 @@ ggsave(filename = here::here("results", "fig_tax_gdp_us.png"),
 # MAPS
 ```{r map_decades}
 volall <- readRDS(here::here("data", "volall.rds"))
+count(volall, period)
 
-voldecades <- volall %>% 
-  filter(period != "1970-2020")
-count(voldecades, period)
+voldecades <- volall %>%
+  filter(period %in% decades)
+# count(voldecades, period)
 
-volfull <- volall %>%
-  filter(period=="1970-2020")
+# volfull <- volall %>%
+#   filter(period=="1970-2020")
 
 gtitle <- "Tax revenue volatility by decade"
 
@@ -1249,7 +1256,8 @@ ggsave(filename = here::here("results", "gdp_tax_us.png"),
 
 # versus trend
 ```{r}
-pdata <- volfull %>%
+# full period 1970-2020
+pdata <- volall %>%
   filter(name %in% c("tottax", "gdp"), realnom=="nominal", stabbr=="US") %>%
   select(stabbr, name, data) %>%
   unnest(data) %>%
@@ -2317,34 +2325,39 @@ savefig("fig_iitmod_cgresids")
 
 ```
 
-```{r iit_soi}
-# get income components data from Urban TPC
+```{r fig_iit_sources}
+# ONETIME: get income components data from Urban TPC
 dsoi <- r"(E:\data\soi)"
 fn <- "historical_source_0.xlsx"
-url <- "https://www.taxpolicycenter.org/file/185517/download?token=cYMr2RRH"
 fpath <- file.path(dsoi, fn)
-download.file(url, fpath, mode="wb")
+
+# url <- "https://www.taxpolicycenter.org/file/185517/download?token=cYMr2RRH"
+
+# download.file(url, fpath, mode="wb")
 
 # year	nret	agi	wages	interest	dividends	busincnet	netcgll	incother	taxbc	taxliab	amt
-# 											
+ 											
 vnames <- c("year", "nret", "agi", "wages", "interest", "dividends",
             "busincnet", "netcgll", "incother", "taxbc", "taxliab", "amt")
-df <- read_excel(fpath, 
+pdata1 <- read_excel(fpath, 
                  col_names = vnames,
                  col_types = "text", 
                  skip=6)
-ht(df)
+ht(pdata1)
 
-df2 <- df %>%
+years <- min(pdata$year):max(pdata$year)
+recs <- recdata(years)
+lsize <- .75
+psize <- .75
+
+pdata <- pdata1 %>%
   select(-c(taxliab, amt)) %>%
   mutate(year=as.integer(year)) %>%
   filter(!is.na(year)) %>%
   mutate(across(-c(year), as.numeric)) %>%
   filter(year >= 1921) %>%
   mutate(intdiv=naz(interest) + naz(dividends)) %>%
-  pivot_longer(-year)
-
-df3 <- df2 %>%
+  pivot_longer(-year) %>%
   filter(year >= 1954) %>%
   arrange(name, year) %>%
   group_by(name) %>%
@@ -2352,29 +2365,53 @@ df3 <- df2 %>%
          pdtrend=value / trend - 1) %>%
   ungroup
 
-df3 %>%
+agivars <- c("agi", "wages", "busincnet", "netcgll")
+agilabs <- c("Adjusted gross income", "Wages",
+             "Net business income",
+             "Net capital gains less losses")
+p <- pdata %>%
   filter(year >= 1955, 
-         !name %in% c("taxbc", "interest", "dividends", "nret")) %>%
-  ggplot(aes(year, pdtrend)) +
-  geom_line() +
-  geom_point() +
+         name %in% agivars) %>%
+  mutate(namef=factor(name, 
+                      levels=agivars,
+                      labels=agilabs)) %>%
+  ggplot(aes(year, pdtrend, colour=namef)) +
+  # put recession bands down before lines and dots
+  geom_band(recs) +
+  geom_line(size=lsize) +
+  geom_point(size=psize) +
   geom_hline(yintercept = 0) +
-  facet_wrap(~name, ncol=2)
+  scale_x_continuous(name=NULL, breaks=seq(1950, 2030, 5)) +
+  scale_y_continuous(breaks=seq(-1, 1, .05),
+                     labels=label_percent(accuracy=1)) +
+  scale_colour_brewer(type="qual", palette="Set1") +
+  # scale_color_viridis(discrete=TRUE) +
+  # scale_color_manual(values=bluegreen) +
+  ggtitle("Volatility of selected components of federal adjusted gross income",
+          subtitle="Percentage deviation from trend") +
+  labs(x=NULL, 
+       y="% deviation from trend",
+       caption="Source: IRS Statistics of Income via https://www.taxpolicycenter.org") +
+  theme_report +
+  legend_notitle +
+  caption_left
+p
+savefig("fig_iit_sources", width=10, height=6)
 
-df3 %>%
-  filter(year >= 1955, 
-         name %in% c("agi", "wages", "busincnet", "netcgll")) %>%
-  ggplot(aes(year, pdtrend, colour=name)) +
-  geom_line() +
-  geom_point() +
-  geom_hline(yintercept = 0)
+# df3 %>%
+#   filter(year >= 1955, 
+#          !name %in% c("taxbc", "interest", "dividends", "nret")) %>%
+#   ggplot(aes(year, pdtrend)) +
+#   geom_line() +
+#   geom_point() +
+#   geom_hline(yintercept = 0) +
+#   facet_wrap(~name, ncol=2)
 
-df3 %>%
-  filter(year >= 1955, 
-         name %in% c("agi", "wages", "busincnet", "netcgll")) %>%
-  group_by(name) %>%
-  summarise(mabs=mean(abs(pdtrend)), sd=sd(pdtrend))
-
+# df3 %>%
+#   filter(year >= 1955, 
+#          name %in% c("agi", "wages", "busincnet", "netcgll")) %>%
+#   group_by(name) %>%
+#   summarise(mabs=mean(abs(pdtrend)), sd=sd(pdtrend))
 
 ```
 
@@ -2932,14 +2969,18 @@ pdata <- volall %>%
 
 p <- pdata %>%
   # filter(stabbr != "AK") %>%
+  mutate(movex=.0007,
+         movey=ifelse(stabbr %in% c("MN", "MO"), .002, 0)) %>%
   ggplot(aes(gdp, tottax)) +
-  geom_point(colour="blue", size=.75) +
-    # geom_text_repel(aes(label=stabbr), size=2, colour="blue",
-    #         nudge_x=.001, data=. %>% filter(tottax < .13)) +
-  geom_text(aes(label=stabbr), size=2, colour="blue",
-            nudge_x=.00075) +
-            # position=position_dodge(width=-.05)) + #nudge_x=.001) +
+  # put the lines down before points and text
+  geom_hline(aes(yintercept=median(tottax, na.rm=TRUE)),
+             linetype="solid", size=.25, colour="darkgrey") +
+  geom_vline(aes(xintercept=median(gdp, na.rm=TRUE)),
+             linetype="solid", size=.25, colour="darkgrey") +
   geom_abline(slope=1, intercept=0) +
+  geom_point(colour="blue", size=.75) +
+  geom_text(aes(label=stabbr, x=gdp + movex, y=tottax + movey),
+            size=2, colour="blue") +
   scale_x_continuous(name=NULL, 
                      breaks=seq(0, 1, .01),
                      labels=label_percent(accuracy=1),
@@ -2950,7 +2991,7 @@ p <- pdata %>%
                      limits=c(0, .46)) +
   scale_y_break(c(.125, .44)) +
   labs(x="State GDP volatility",
-       title="State tax revenue and GDP volatility, 2000-2020",
+       title="State tax revenue volatility and GDP volatility, 2000-2020",
        subtitle="% deviation from trend, interquartile range") +
   theme_report
 p
@@ -2958,6 +2999,158 @@ p
 savefig(basename="fig_pdtrend_taxgdp_scatter", scale=1.0)
 ```
 
+
+```{r volcorr}
+volcorr1 <- volall %>%
+  filter(period=="2000-2020",
+         realnom=="nominal",
+         name %in% c(taxnames$name),
+         stabbr != "US") %>%
+  select(stabbr, name, data) %>%
+  unnest(data) %>%
+  select(stabbr, name, year, pdtrend) %>%
+  pivot_wider(values_from = pdtrend, values_fill = 0)
+
+pmean <- function(..., na.rm = FALSE) {
+  # https://rdrr.io/github/tanaylab/tgutil/src/R/utils.R
+  d <- do.call(cbind, list(...))
+  res <- rowMeans(d, na.rm = na.rm)
+  idx_na <- !rowMeans(!is.na(d))
+  res[idx_na] <- NA
+  return(res)
+}
+
+volcorr2 <- volcorr1 %>%
+  group_by(stabbr) %>%
+  summarize(iitgst = cor(iit, gst),
+            iitcit=cor(iit, cit),
+            gstcit=cor(gst, cit),
+            .groups="drop") %>%
+  mutate(pmean=pmean(iitgst, iitcit, gstcit, na.rm=TRUE)) %>%
+  arrange(desc(pmean))
+volcorr2
+
+volcorr2 %>%
+  summarise(across(-stabbr, ~ median(.x, na.rm=TRUE)))
+
+
+```
+
+
+```{r tab_states_vol}
+tabdata1 <- volall %>%
+  filter(period=="2000-2020",
+         realnom=="nominal",
+         name %in% c(taxnames$name, "gdp"),
+         stabbr != "US") %>%
+  select(stabbr, name, period, pdtrendiqr) %>%
+  pivot_wider(values_from = pdtrendiqr) 
+
+tabdata2 <- tabdata1 %>%
+  left_join(taxshares %>%
+              filter(year==2020) %>%
+              select(stabbr, iitshare=iit, sevtaxshare=sevtax),
+              by = "stabbr") %>%
+  mutate(stname=stname(stabbr)) %>%
+  select(stname, tottax, gdp, iit, gst, selsalestax, cit, sevtax, othertax,
+         iitshare, sevtaxshare) %>%
+  arrange(desc(tottax))
+
+tabdata3 <- tabdata2 %>%
+  summarise(across(-stname, ~median(.x, na.rm=TRUE)), .groups="drop") %>%
+  mutate(stname="50-state medians")
+
+tabdata <- bind_rows(tabdata3, 
+                     tibble(tottax=NA_real_), # insert blank row
+                     tabdata1 %>% filter(row_number() <= 10)) %>%
+  select(stname, everything())
+tabdata
+
+tab <- tabdata %>%
+  gt() %>%
+  tab_header(
+    title = "Selected characteristics of top 10 tax-volatility states in 2000-2020"
+    ) %>%
+    cols_label(stname="",
+               tottax=html("Total tax"),
+               gdp=html("State GDP"),
+               iit=html("Personal income tax"),
+               gst=html("General sales tax"),
+               selsalestax=html("Selective sales taxes"),
+               cit=html("Corporate income tax"),
+               sevtax=html("Severance taxes"),
+               othertax=html("Other taxes"),
+               iitshare=html("Personal income tax"),
+               sevtaxshare=html("Severance taxes")) %>%
+    tab_spanner(
+      label = html("<br>Volatility: Interquartile range of percent deviation from trend"),
+      columns = tottax:othertax
+      ) %>%
+    tab_spanner(
+      label = "Share of tax revenue in 2020:",
+      columns = c(iitshare, sevtaxshare)
+      ) %>%
+    fmt_percent(
+      columns = -stname,
+      decimals = 1) %>%
+    fmt_missing(row=2, columns=everything(), missing_text="") %>%
+    fmt_missing(row= c(1, 3:nrow(tabdata)), columns=everything(), missing_text="-") %>%
+    tab_style(
+      style = list(
+        cell_fill(color = "grey95")
+      ),
+      locations = cells_body(
+        rows=seq(3, nrow(tabdata), 2))
+      ) %>%
+  cols_width(
+    stname ~ pct(15),
+  ) %>%
+  tab_options(
+    table.width = pct(100),
+    # row.padding = px(3)
+    )
+tab
+savetab("tab_states_vol")
+
+```
+
+
+```{r notes_p25p75}
+notes <- volall %>%
+  filter(period=="2000-2020",
+         realnom=="nominal",
+         name %in% c("tottax", "gdp")) %>%
+  select(stabbr, name, period, pdtrendiqr, pdtrend25, pdtrend75) %>%
+  arrange(desc(name), desc(pdtrendiqr))
+notes
+
+```
+
+
+```{r notes_state_taxgenrev_share}
+slgfin %>%
+  filter(level==2, aggvar %in% c("totrev.gen", "tottax"), year==max(year)) %>%
+  select(stabbr, name=aggvar, value) %>%
+  pivot_wider() %>%
+  mutate(taxshare=tottax / totrev.gen,
+         mdn=median(taxshare[stabbr != "US"])) %>%
+  arrange(desc(taxshare))
+
+taxshares %>% filter(year==2020)
+taxshares %>% 
+  filter(year==2020, stabbr %in% state.abb) %>%
+  summarise(across(-c(stabbr, year), ~median(.x, na.rm=TRUE)))
+
+soiall %>%
+  filter(year==max(year), stabbr %in% state.abb, 
+         vname %in% c("agi", "netcgll"), incgrp=="all") %>%
+  select(stabbr, name=vname, value) %>%
+  pivot_wider(values_fill = 0) %>%
+  mutate(cgpct=netcgll / agi,
+         cgcptmdn=median(cgpct)) %>%
+  arrange(desc(cgpct))
+
+```
 
 
 ```{r scatter}

@@ -1,4 +1,39 @@
 
+#######################################################################
+#' Vectorized mean, similiar to \code{pmin} and \code{pmax}
+#'
+#' @param ... numeric vectors to average
+#' @param na.rm a logical indicating whether missing values should be removed
+#'
+#' @return a vector with mean of \code{...} arguments
+#'
+#' @export
+pmean <- function(..., na.rm = FALSE) {
+  d <- do.call(cbind, list(...))
+  res <- rowMeans(d, na.rm = na.rm)
+  idx_na <- !rowMeans(!is.na(d))
+  res[idx_na] <- NA
+  return(res)
+}
+
+
+#######################################################################
+#' Vectorized sum, similiar to \code{pmin} and \code{pmax}
+#'
+#' @param ... numeric vectors to sum
+#' @param na.rm a logical indicating whether missing values should be removed
+#'
+#' @return a vector with sum of \code{...} arguments
+#'
+#' @export
+psum <- function(..., na.rm = FALSE) {
+  d <- do.call(cbind, list(...))
+  res <- rowSums(d, na.rm = na.rm)
+  idx_na <- !rowSums(!is.na(d))
+  res[idx_na] <- NA
+  return(res)
+}
+
 # libraries ----
 library(fredr)
 
@@ -663,3 +698,13 @@ volfull %>%
   geom_point() +
   geom_hline(yintercept = 0)
 
+glimpse(slgfin)
+count(slgfin, aggvar)
+slgfin %>%
+  filter(level==2, aggvar %in% c("totrev.gen", "tottax"), year==max(year)) %>%
+  select(stabbr, name=aggvar, value) %>%
+  pivot_wider() %>%
+  mutate(taxshare=tottax / totrev.gen,
+         mdn=median(taxshare[stabbr != "US"])) %>%
+  arrange(desc(taxshare))
+  
