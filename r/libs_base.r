@@ -66,12 +66,12 @@ library(csppData)
 
 # FRED ----
 library(fredr)
-fred_apikey <- "a5e1199baac333154cbffcba3b263c28"
 fredr_set_key(fred_apikey)
 
 
 # Boyd libraries ----
 library(bdata)
+library(bggtools)
 library(bmaps)
 library(btools)
 library(BEAData)

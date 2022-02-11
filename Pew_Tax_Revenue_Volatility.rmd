@@ -144,7 +144,6 @@ str(knitr::opts_chunk$get()) # for a list of default chunk options.
 ```
 
 ```{r renv_notes, eval=FALSE}
-
 # vignette("renv")
 # documentation online at https://rstudio.github.io/renv
 # 
@@ -247,6 +246,12 @@ devtools::build(pkg = file.path(pkgsource_dir, "btools"),
 
 ```
 
+# System specific
+```{r system_specific}
+
+```
+
+
 # Libraries and functions
 
 ```{r get_libs, eval=TRUE}
@@ -259,6 +264,7 @@ devtools::session_info()
 # knitr::opts_current$get()
 
 ```
+
 
 ```{r get_functions}
 source(here::here("r", "functions_maps.r"))
@@ -315,9 +321,6 @@ bluegreen <- c("blue", "darkgreen")
 
 
 #.. graph theme items ----
-# legend_none <- theme(legend.position = "None")
-# legend_notitle <- theme(legend.title = element_blank())
-# caption_left <- theme(plot.caption = element_text(hjust = 0))
 
 theme_report <- theme_bw() + 
   theme(

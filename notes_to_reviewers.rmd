@@ -1,0 +1,107 @@
+---
+title: "Notes to reviewers"
+author: "Don Boyd"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook: 
+    df_print: paged
+    fig_height: 6
+    fig_width: 8
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+---
+
+# System setup
+
+-   make sure that you can find in the share drive
+    -   the project directory `Pew_Revenue_Volatility`
+
+    -   the data directory `data`
+-   make sure you have:
+    -   R version 4.1.2 or later installed
+
+    -   a recent version of RStudio installed
+
+        -   I ran this with daily build `RStudio-2022.02.0-432` (see [here](https://dailies.rstudio.com/) but you should be able to run everything with the latest released version
+
+        -   If any troubles, please email me ([mailto:donboyd5\\\@gmail.com](mailto:donboyd5\@gmail.com){.uri})
+-   copy the entire project directory `Pew_Revenue_Volatility` from the share drive to your machine
+-   open the file `constants_system.r` in the `r` folder of the project - **(I recommend doing this with a text editor at this point, rather than opening it in RStudio, as that will trigger actions you might rather not have happen yet - nothing fatal, but you'll be waiting for those actions to end before you can proceed)**
+    -   you will see my system-specific information:
+
+        -   global directory names mapped to folder locations on my computer
+
+        -   my FRED API key
+
+    -   modify `constants_system.r` by commenting-out my system-specific information and putting yours in
+
+        -   map directories on your computer, with whatever names you want, to the global variables in `constants_system.r`; as of this writing, the global variables are `beadir`, `qcewdir`, and `scratchdir` but there could be more or different global variables by the time you read this
+
+        -   if you don't have a FRED API key you can either use mine or just put in any old string I think - so that you have the exact data I have, you can use the data I provide with the project - in other words, best NOT to download new data from FRED anyway because data may have been revised (very slightly) after I last downloaded it
+-   copy data from the share drive `data` subdirectories to the directories you are using
+    -   if your review requires you to go to the original source of these files:
+
+        -   I'd suggest you do that after first running things using the data I downloaded and put in these directories
+
+        -   then, if you want to download from source, in the \`prep_data.r\` program you will see commented-out code that downloads files I used
+
+        -   however because data can be revised this may lead to different results from mine; I would expect the differences to be miniscule
+
+# Project setup
+
+-   start RStudio
+
+-   open the project file `Pew_Revenue_Volatility.Rproj` in RStudio
+
+-   wait for it to finish examining the packages the project uses
+
+    -   when I did this to check transferring from one computer to another it gave me warnings about `DESCRIPTION` files missing from 9 packages
+
+    -   I went ahead with the next step anyway and all worked
+
+-   at the console, enter `renv::restore()`
+
+    -   wait for it to finish installing packages; it will take a while
+
+    -   this, too, gave me warnings, noting that `DESCRIPTION` files were missing for the packages `cluster`, `KernSmooth`, and `codetools`
+
+-   assuming all good, proceed to "Check the setup"
+
+# Check the setup
+
+-   open `libs_base.r` in the `r` folder
+
+    -   step through the `library(…)` statements one by one, making sure each library is installed; when I did this, there were no errors or warnings
+
+    -   you'll install several packages that I created; they should install without trouble; if you want to verify how they were constructed, check the project directory `renv/local`, which has the source code for each package; also, [<https://github.com/donboyd5>]
+
+        -   `bdata` - selected datasets; this project uses `sgtax.a` (annual state government tax data from the U.S. Bureau of the Census) and `recessions` (official recession dates from the National Bureau of Economic Research)
+
+        -   `bggtools` - selected functions and themes to use with the package `ggplot2`
+
+        -   `bmaps` - longitude and latitude data to use in maps of the U.S.
+
+        -   `btools` - miscellaneous utility and statistical functions
+
+        -   `BEAData` - annual, quarterly, and monthly data from the National Income and Products Accounts (NIPA) from the U.S. Bureau of Economic Analysis; this project uses `nipa`
+
+        -   `BLSdata` - monthly data from the U.S. Bureau of Labor Statistics; this project uses ...
+
+        -   `qtax` - quarterly tax revenue data from the U.S. Bureau of the Census
+
+-   repeat with `libs_ts.r`; these, too, should install without trouble
+
+# Data preparation
+
+-   open `prep_data.r` in the `r` project folder
+
+-   you'll see my notes about how to navigate the code efficiently
+
+-   step through the program bit by bit - do not try to run it all at once
+
+-   this will create the RData files
+
+    -   general.RData
+
+    -   
