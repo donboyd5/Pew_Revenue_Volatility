@@ -182,7 +182,8 @@ pkgdir <- r"(C:\Users\donbo\Documents\R_projects\Pew_Revenue_Volatility\renv\loc
 
 # 2) This step is for Boyd only:
 # uncomment code below, build Boyd packages, save tarballs in the renv local directory
-# bdata BEAData BLSdata bmaps btools qtax
+# bdata bggtools bmaps btools
+# BEAData BLSdata qtax
 devtools::build(pkg = file.path(pkgsource_dir, "btools"),  
                 path = pkgdir,
                 binary = FALSE,
@@ -202,11 +203,27 @@ devtools::build(pkg = file.path(pkgsource_dir, "btools"),
 
 # Now, install each package, being sure to use full tarball name based on files in the
 # pkgdir directory (tarball names may be updated from those shown below)
+
+# bdata - selected data - state population, etc.
+#         data(package="bdata") # shows what's in it
+# bggtools - tools for ggplot2, such as recession bands
+# bmaps - maps of continental U.S. + DC (states49), plus 50 states + DC (states51)
+# btools - various convenience functions
+
+# BEAData
+# BLSdata
+# qtax
+
+# after building the packages, install them; be SURE that the version number for
+# each package matches the latest version in the renv/local folder
+
 # renv::install(file.path(pkgdir, "bdata_0.9.tar.gz"))
+# renv::install(file.path(pkgdir, "bggtools_0.0.9200.tar.gz"))
+# renv::install(file.path(pkgdir, "bmaps_0.1.0.tar.gz"))
+# renv::install(file.path(pkgdir, "btools_0.9.4.tar.gz"))
+
 # renv::install(file.path(pkgdir, "BEAData_0.7.4.tar.gz"))
 # renv::install(file.path(pkgdir, "BLSdata_0.3.1.tar.gz")) 
-# renv::install(file.path(pkgdir, "bmaps_0.1.0.tar.gz"))
-# renv::install(file.path(pkgdir, "btools_0.9.1.tar.gz"))
 # renv::install(file.path(pkgdir, "qtax_0.3.0.tar.gz"))
 
 
@@ -232,61 +249,28 @@ devtools::build(pkg = file.path(pkgsource_dir, "btools"),
 
 # Libraries and functions
 
-```{r get_libs_and_functions, eval=TRUE}
+```{r get_libs, eval=TRUE}
 # clear objects from the workspace
 rm(list=ls(all=TRUE))
 source(here::here("r", "libs_base.r"))
 source(here::here("r", "libs_ts.r"))
-source(here::here("r", "functions_utility.r"))
-source(here::here("r", "functions_stats.r"))
-source(here::here("r", "functions_measures.r"))
-source(here::here("r", "functions_3panel.r"))
 devtools::session_info()
 # devtools::package_info()
 # knitr::opts_current$get()
 
 ```
 
-```{r functions, eval=TRUE}
+```{r get_functions}
+source(here::here("r", "functions_maps.r"))
+source(here::here("r", "functions_measures.r"))
+source(here::here("r", "functions_plots.r"))
+source(here::here("r", "functions_utility.r"))
 
-savefig <- function(basename, .p=p, .pdata=pdata, width=8, height=6, scale=1) {
-  
-  ggsave(filename = here::here("results", 
-                               paste0(basename, ".png")),
-         plot = .p, 
-         width=width, height=height,
-         scale=scale)
-         
-  write_csv(.pdata, file= here::here("results", paste0(basename, "_data.csv")))
-}
+```
 
-savetab <- function(basename, .tab=tab, .tabdata=tabdata, zoom=2, expand=5) {
-  # zoom and expand are passed to the underlying webshot::webshot() function
-  # for PNG saving zoom defaults to a scale level of 2 and
-  # expand (adds whitespace pixels around cropped table image) has a default value of 5)
-  
-  # expand: A numeric vector specifying how many pixels to expand the clipping
-  # rectangle by. If one number, the rectangle will be expanded by that many
-  # pixels on all sides. If four numbers, they specify the top, right, bottom,
-  # and left, in that order. When taking screenshots of multiple URLs, this
-  # parameter can also be a list with same length as url with each element of
-  # the list containing a single number or four numbers to use for the
-  # corresponding URL.
-  
-  # zoom: A number specifying the zoom factor. A zoom factor of 2 will result in
-  # twice as many pixels vertically and horizontally. Note that using 2 is not
-  # exactly the same as taking a screenshot on a HiDPI (Retina) device: it is
-  # like increasing the zoom to 200 doubling the height and width of the browser
-  # window. This differs from using a HiDPI device because some web pages load
-  # different, higher-resolution images when they know they will be displayed on
-  # a HiDPI device (but using zoom will not report that there is a HiDPI
-  # device).
-  
-  gtsave(.tab, here::here("results", paste0(basename, ".png")),
-         zoom = zoom, expand = expand)
-         
-  write_csv(.tabdata, file= here::here("results", paste0(basename, "_data.csv")))
-}
+
+```{r more_functions, eval=TRUE}
+
 
 ```
 
@@ -331,34 +315,14 @@ bluegreen <- c("blue", "darkgreen")
 
 
 #.. graph theme items ----
-legend_none <- theme(legend.position = "None")
-legend_notitle <- theme(legend.title = element_blank())
-caption_left <- theme(plot.caption = element_text(hjust = 0))
+# legend_none <- theme(legend.position = "None")
+# legend_notitle <- theme(legend.title = element_blank())
+# caption_left <- theme(plot.caption = element_text(hjust = 0))
 
 theme_report <- theme_bw() + 
   theme(
     plot.caption = element_text(hjust = 0)
     )
-
-# theme_map_boyd <- function(base_size=9, base_family="") {
-#   # https://socviz.co/maps.html
-#   # https://github.com/kjhealy/socviz
-#   require(grid)
-#   theme_bw(base_size=base_size, base_family=base_family) %+replace%
-#     theme(axis.line=element_blank(),
-#           axis.text=element_blank(),
-#           axis.ticks=element_blank(),
-#           axis.title=element_blank(),
-#           panel.background=element_blank(),
-#           panel.border=element_blank(),
-#           panel.grid=element_blank(),
-#           panel.spacing=unit(0, "lines"),
-#           plot.background=element_blank(),
-#           legend.justification = c(0,0) # ,
-#           # legend.position = c(0,0)
-#     )
-# }
-
 
 #.. miscellaneous constants ---
 mlabels <- tribble(
@@ -401,7 +365,6 @@ load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
 load(file = here::here("data", "gdp_state.RData"), verbose=TRUE)
 load(file = here::here("data", "qcew_state.RData"), verbose=TRUE)
 load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
-# load(file = here::here("data", "bmaps.RData"), verbose=TRUE)
 
 ```
 
@@ -766,95 +729,8 @@ saveRDS(volrecs, here::here("data", "volrecs.rds"))
 
 ```
 
-# MAPPING FUNCTION
 
-## Mapping volatility measures
-
-```{r}
-#.. function to map vol measures ----
-# Sequential color palettes available in colorbrewer
-# Blues, BuGn, BuPu, GnBu, Greens, Greys, Oranges, OrRd, PuBu, PuBuGn, PuRd,
-# Purples, RdPu, Reds, YlGn, YlGnBu, YlOrBr, YlOrRd
-
-
-f_volmap <- function(tax="tottax", measure="sre", 
-                     gtitle, data=volrecs, facetvar="recyear") {
-  
-  # titles
-  if(measure=="sre"){
-    mname="short-run elasticity"
-  } else if(measure=="pchiqr"){
-    mname="interquartile range of percent change"
-  } else if(measure=="dpchtrendiqr"){
-    mname="interquartile range of difference in percent change from trend"
-  }else if(measure=="pdtrendiqr"){
-    mname="interquartile range of percent deviation from trend"
-  }
-  gsubtitle <- paste0("Volatility measure: ", mname)
-  
-  # build the data
-  voldata <- data %>%
-    filter(name==tax, realnom=="nominal") %>%
-    select(facet=all_of(facetvar), stabbr, value=all_of(measure))
-  
-  # cut the measure into quartiles, over all recession years
-    
-  f_breaks <- function(value){
-    # function to define quartile cuts
-    qtiles <- quantile(value, p=c(0, .25, .5, .75, 1), na.rm=TRUE)
-    # breaks replace min and max with infinite
-    c(-Inf, qtiles[-c(1, length(qtiles))], Inf)
-  }
-  breakpoints <- f_breaks(voldata$value)
-  
-  # create decent labels for the groups defined by these breakpoints
-  f_cutlabs <- function(breakpoints){
-    if(measure %in% c("pdtrendiqr", "pchiqr", "dpchtrendiqr")){
-      fmt_breaks <- percent(breakpoints[2:4], accuracy=.1)
-    } else if(measure %in% c("sre")){
-      fmt_breaks <- number(breakpoints[2:4], accuracy=.01)
-    }
-    lab1 <- paste0("Q1: <= ", fmt_breaks[1])
-    lab2 <- paste0("Q2: > ", fmt_breaks[1], " - ", fmt_breaks[2])
-    lab3 <- paste0("Q3: > ", fmt_breaks[2], " - ", fmt_breaks[3])
-    lab4 <- paste0("Q4: > ", fmt_breaks[3])
-    c(lab1, lab2, lab3, lab4)
-  }
-  vlabs <- f_cutlabs(breakpoints)
-  
-  # create input data frame with all states plus DC for all periods
-  # then cut into groups and label
-  mbase <- expand_grid(stabbr=c(state.abb, "DC"),
-                       facet=unique(voldata$facet)) %>%
-    left_join(voldata, by = c("stabbr", "facet")) %>%
-    mutate(vcut=cut(value, breakpoints),
-           vlab=factor(as.integer(vcut), levels=1:4, labels = vlabs))
-  
-  # now construct the mapdata and create the map
-  # we need an input data frame that has all states plus DC for all years
-  mdata <- states51 %>%
-    left_join(mbase, by="stabbr")
-
-  m <- mdata %>%
-    ggplot(aes(x = long, y = lat, group = group, fill = vlab)) +
-    geom_polygon(color = "black", size = 0.1) +
-    coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
-    scale_fill_brewer(palette = "BuPu", na.translate = FALSE) + # , na.value="grey90") +
-    # scale_fill_manual(breaks=as.integer(1:4), values=c("red", "green", "yellow", "blue")) +
-    theme_map() + 
-    theme(legend.position = "right") +
-    labs(fill="Quartile: ") +
-    # legend_notitle +
-    facet_wrap(~facet, ncol = 2) +
-    ggtitle(gtitle, subtitle=gsubtitle)
-  
-   # return the base map data and the map
-   mlist <- list(mbase=mbase, m=m)
-}
-
-```
-
-# ESSENTIALLY ALL PREP BEFORE HERE
+# END OF PREP, START OF ANALYSIS
 
 # 1. INTRODUCTION - MOTIVATION
 
@@ -1113,6 +989,76 @@ mudl %>%
   kbl(format="html", digits=2)
 
 ```
+
+## State examples
+
+## 3-panel graph - explore
+
+```{r fig_caiit_3panel}
+
+caiit <- censustax %>%
+  filter(stabbr=="CA", name=="iit", year %in% 1975:2005) %>%
+  prep_3panel()
+
+# p1f(caiit, title="abc", colors,
+#                 xinterval=5, xlims=c(NA, NA), 
+#                 ylims=c(NA, NA), 
+#                 scale=1, scaled_units=NULL)
+
+# p3f(caiit, title="abc")
+
+p <- panel3(caiit, "California income tax revenue", scale=1e6, scaled_units="$ billions")
+p
+ggsave(filename = here::here("results", "fig_caiit_3panel.png"),
+       plot = p, width=8, height=8, scale=1)
+
+
+# censustax %>%
+#   filter(stabbr=="CA", name=="iit", year %in% 1970:2020) %>%
+#   prep_3panel() %>%
+#   panel3("California income tax revenue", scale=1e6, scaled_units="$ billions")
+# 
+# p1 <- censustax %>%
+#   filter(stabbr=="NY", name=="gst", year %in% 1975:2020) %>%
+#   prep_3panel() %>%
+#   panel3("New York sales tax revenue", scale=1e6, scaled_units="$ billions", xlims=c(1975, 2020))
+# 
+# p2 <- stack %>%
+#   filter(stabbr=="NY", name=="rsgdp", year %in% 1975:2020) %>%
+#   prep_3panel() %>%
+#   panel3("New York state real GDP", scale=1e3, scaled_units="$ billions", xlims=c(1975, 2020))
+# 
+# p1 | p2
+# 
+# 
+# revdf <- censustax %>%
+#   filter(stabbr=="NY", name=="gst", year %in% 1975:2020) %>%
+#   prep_3panel()
+# econdf <- stack %>%
+#   filter(stabbr=="NY", name=="rsgdp", year %in% 1975:2020) %>%
+#   prep_3panel()
+# 
+# revecon4(revdf, econdf,
+#          revtitle="New York sales tax revenue",
+#          econtitle="New York state real GDP")
+# 
+# 
+# revdf <- censustax %>%
+#   filter(stabbr=="OH", name=="selsalestax", year %in% 1975:2020) %>%
+#   prep_3panel()
+# 
+# econdf <- stack %>%
+#   filter(stabbr=="OH", name=="rsgdp", year %in% 1975:2020) %>%
+#   prep_3panel()
+# 
+# revecon4(revdf, econdf,
+#          revtitle="Ohio selsalestax revenue",
+#          econtitle="Ohio state real GDP")
+
+
+```
+
+
 
 # 3. HOW DOES VOLATILITY VARY BY TAX?
 
@@ -4871,71 +4817,6 @@ df2 %>%
   ggplot(aes(year, vol)) +
   geom_line() +
   geom_point()
-
-```
-
-## 3-panel graph - explore
-
-```{r}
-
-caiit <- censustax %>%
-  filter(stabbr=="CA", name=="iit", year %in% 1975:2005) %>%
-  prep_3panel()
-
-p1f(caiit, title="abc", colors,
-                xinterval=5, xlims=c(NA, NA), 
-                ylims=c(NA, NA), 
-                scale=1, scaled_units=NULL)
-
-p3f(caiit, title="abc")
-
-p <- panel3(caiit, "California income tax revenue", scale=1e6, scaled_units="$ billions")
-p
-ggsave(filename = here::here("results", "caiit_3panel.png"), plot = p, width=8, height=8, scale=1)
-
-
-censustax %>%
-  filter(stabbr=="CA", name=="iit", year %in% 1970:2020) %>%
-  prep_3panel() %>%
-  panel3("California income tax revenue", scale=1e6, scaled_units="$ billions")
-
-p1 <- censustax %>%
-  filter(stabbr=="NY", name=="gst", year %in% 1975:2020) %>%
-  prep_3panel() %>%
-  panel3("New York sales tax revenue", scale=1e6, scaled_units="$ billions", xlims=c(1975, 2020))
-
-p2 <- stack %>%
-  filter(stabbr=="NY", name=="rsgdp", year %in% 1975:2020) %>%
-  prep_3panel() %>%
-  panel3("New York state real GDP", scale=1e3, scaled_units="$ billions", xlims=c(1975, 2020))
-
-p1 | p2
-
-
-revdf <- censustax %>%
-  filter(stabbr=="NY", name=="gst", year %in% 1975:2020) %>%
-  prep_3panel()
-econdf <- stack %>%
-  filter(stabbr=="NY", name=="rsgdp", year %in% 1975:2020) %>%
-  prep_3panel()
-
-revecon4(revdf, econdf,
-         revtitle="New York sales tax revenue",
-         econtitle="New York state real GDP")
-
-
-revdf <- censustax %>%
-  filter(stabbr=="OH", name=="selsalestax", year %in% 1975:2020) %>%
-  prep_3panel()
-
-econdf <- stack %>%
-  filter(stabbr=="OH", name=="rsgdp", year %in% 1975:2020) %>%
-  prep_3panel()
-
-revecon4(revdf, econdf,
-         revtitle="Ohio selsalestax revenue",
-         econtitle="Ohio state real GDP")
-
 
 ```
 
