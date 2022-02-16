@@ -66,7 +66,7 @@ library(csppData)
 
 # FRED ----
 library(fredr)
-fredr_set_key(fred_apikey)
+# note that you will need an api key to use FRED
 
 
 # Boyd libraries ----

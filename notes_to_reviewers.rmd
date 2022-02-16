@@ -25,7 +25,7 @@ output:
 
         -   I ran this with daily build `RStudio-2022.02.0-432` (see [here](https://dailies.rstudio.com/) but you should be able to run everything with the latest released version
 
-        -   If any troubles, please email me ([mailto:donboyd5\\\@gmail.com](mailto:donboyd5\@gmail.com){.uri})
+        -   If any troubles, please email me ([mailto:donboyd5\\\@gmail.com](mailto:donboyd5@gmail.com){.uri})
 -   copy the entire project directory `Pew_Revenue_Volatility` from the share drive to your machine
 -   open the file `constants_system.r` in the `r` folder of the project - **(I recommend doing this with a text editor at this point, rather than opening it in RStudio, as that will trigger actions you might rather not have happen yet - nothing fatal, but you'll be waiting for those actions to end before you can proceed)**
     -   you will see my system-specific information:
