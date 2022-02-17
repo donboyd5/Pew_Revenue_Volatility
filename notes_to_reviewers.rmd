@@ -74,21 +74,21 @@ output:
 
     -   step through the `library(…)` statements one by one, making sure each library is installed; when I did this, there were no errors or warnings
 
-    -   you'll install several packages that I created; they should install without trouble; if you want to verify how they were constructed, check the project directory `renv/local`, which has the source code for each package; also, [<https://github.com/donboyd5>]
+    -   this step will install several packages that I created; they should install without trouble; if you want to verify how they were constructed, check the project directory `renv/local`, which has the source code for each package; also, [<https://github.com/donboyd5>]
 
-        -   `bdata` - selected datasets; this project uses `sgtax.a` (annual state government tax data from the U.S. Bureau of the Census) and `recessions` (official recession dates from the National Bureau of Economic Research)
+        -   `bdata` - includes two data frames I created: `sgtax.a` (annual state government tax data from the U.S. Bureau of the Census) and `recessions` (official recession dates from the National Bureau of Economic Research); code in the data-raw directory downloads and gets the data; I would not recommend updating any data
 
-        -   `bggtools` - selected functions and themes to use with the package `ggplot2`
+        -   `bggtools` - selected functions and themes to use with the package `ggplot2`; simple stuff - I don't think you'll feel a need to do anything with this
 
-        -   `bmaps` - longitude and latitude data to use in maps of the U.S.
+        -   `bmaps` - has two data frames I created, with longitude/latitude for the U.S.: `states49`, which has long/lat for the 48 continental states and DC, and `states51`, with long/lat for the 50 states, with AK and HI as insets below the continental U.S., plus DC (I use `states51` in the project)
 
-        -   `btools` - miscellaneous utility and statistical functions
+        -   `btools` - miscellaneous utility and statistical functions; nothing to do here; if you want to see a function, just type its name at the console --- e.g., typing "ht" will show you that `ht` is a function that displays the head and the tail of an objet
 
-        -   `BEAData` - annual, quarterly, and monthly data from the National Income and Products Accounts (NIPA) from the U.S. Bureau of Economic Analysis; this project uses `nipa`
+        -   `BEAData` - includes the data frame `nipa`, which I created from data I downloaded from the BEA site; it has annual, quarterly, and monthly data from the National Income and Products Accounts (NIPA) from the U.S. Bureau of Economic Analysis; if you type `comment(nipa)` it will tell you the download date; I try to follow this convention for most data files in packages
 
         -   `BLSdata` - monthly data from the U.S. Bureau of Labor Statistics; this project uses ...
 
-        -   `qtax` - quarterly tax revenue data from the U.S. Bureau of the Census
+        -   `qtax` - quarterly tax revenue data from the U.S. Bureau of the Census; has the data frame `qtax`, which has data I downloaded from the Census web site
 
 -   repeat with `libs_ts.r`; these, too, should install without trouble
 
@@ -98,10 +98,36 @@ output:
 
 -   you'll see my notes about how to navigate the code efficiently
 
--   step through the program bit by bit - do not try to run it all at once
+-   the program loads subprograms to accomplish major tasks
 
--   this will create the RData files
+    -   gather, organize and save major categories of data
 
-    -   general.RData
+    -   "stack" the separate data files
 
-    -   
+    -   construct volatility measures
+
+-   the major gathering, organizing, and saving tasks are
+
+    -   general data
+
+    -   capital gains and agi data
+
+    -   national economic data
+
+    -   state gdp data
+
+    -   tax data
+
+-   step through the program bit by bit - do not try to run it all at once (although that will work, if your goal is to look at the final result)
+
+-   this will create the RData files needed for the analysis program
+
+# Analysis
+
+-   open Pew_Tax_Volatility.rmd
+
+-   step through the chunks one at a time
+
+-   this will produce all of the figures, maps, and tables in the report
+
+-   and will calculate and print certain facts that are inline in the report text

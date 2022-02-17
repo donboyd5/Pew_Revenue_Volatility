@@ -1,7 +1,16 @@
 # ONETIME national data downloads ---------------------------
+
+# CAUTION: These will overwrite existing data previously downloaded.
+
+# In an emergency, you can retrieve copies of the original 
+# versions of the data from here:
+
+#    .../raw_data/backup_ONETIME_data/
+
+
 #.. ONETIME: get and save national unemployment rate ----
 # https://fred.stlouisfed.org/series/UNRATE
-fredr_set_key(fred_apikey)
+fredr_set_key(fred_apikey)  # fred_apikey was defined in r/constants_system.r
 unrate <- fredr("UNRATE", frequency = "q")
 saveRDS(unrate, here::here("raw_data", "unrate.rds"))
 

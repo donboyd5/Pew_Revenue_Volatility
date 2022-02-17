@@ -5,7 +5,7 @@
 # load or define system-specific constants
 #   for example, folders that store raw data
 
-# you will need the following locations:OO
+# you will need the following locations:
 #   beadir # for BEA (Bureau of Economic Analysis) data
 #   qcewdir # for BLS (Bureau of Labor Statistics) 
 #     Quarterly Census of Employment and Wages (QCEW)
@@ -23,20 +23,21 @@ tidyverse_conflicts()
 
 
 # get functions -----------------------------------------------------------
+# at present no additional functions are needed
 # source(here::here("r", "functions_maps.r"))
 # source(here::here("r", "functions_measures.r"))
 # source(here::here("r", "functions_plots.r"))
 # source(here::here("r", "functions_utility.r"))
 
-# NOTE: Certain section names start with "ONETIME". In those sections, I create and
-# save data that will be later read from files. The data only need to be created
-# one time (or updated and re-saved if I decide to update the data).
+# NOTE: If a section name starts with "ONETIME", it creates and
+# saves data that will later be read from files. The data only need to
+# be created one time (or updated and re-saved if an update is desired).
 
 
 # ONETIME download data -------------------------------
 # CAUTION:
 
-#   The following programs download files from the internet and saves them
+#   The following programs download files from the internet and save them
 #   in the raw_data project directory.
 
 #   If you do this you may download revised versions of data and get slightly
@@ -45,20 +46,46 @@ tidyverse_conflicts()
 #   To reproduce the numbers I have, you will need to use the versions of the
 #   files I have downloaded, which are already stored in the project.
 
-#   Thus, do not...
+#   Thus, do not do the following unless you don't mind getting 
+#   some different numbers...
+
 # source(here::here("r", "data_prep_subs", "sub_ONETIME_downloads.r"))
 
+# In an emergency, you can retrieve copies of the original 
+# versions of the data from here:
 
-# source files that create the data -----------------------------
-# step through each file line by line 
+#    .../raw_data/backup_ONETIME_data/
+
+
+# "sub_..." r files that create the data -----------------------------
+# I recommend stepping through each "sub_..." r file line by line 
+# rather than sourcing the file - but if you source the files
+# everything still should work as intended
+
+# note that the "sub_..." r files do not load libraries - load them per above
 
 
 # general.RData -----------------------------------------------------------
+# inputs:  none, other than official R data (e.g., state.abb)
+# outputs: data/general.RData
 source(here::here("r", "data_prep_subs", "sub_general.r"))
-load(file = here::here("data", "general.RData"), verbose=TRUE)
+# load(file = here::here("data", "general.RData"), verbose=TRUE)
+
+
+# capgainsagi.Rdata ----------------------------------------------------------------
+# inputs: 
+#    raw_data/soi/NationalCapitalGains.xlsx
+#    raw_data/soi/histab6.xls
+#    raw_data/soi/19intaba.xls
+# outputs:
+#    data/soi/capgainsagi.RData
+source(here::here("r", "data_prep_subs", "sub_capgainsagi.r")) # needs sfy_startmonths in memory
+# load(file=here::here("data", "capgainsagi.RData"), verbose=TRUE)
 
 
 # econ_national.RData -----------------------------------------------------
+# inputs:  BEAData::nipa
+# outputs: data/econ_national.RData
 source(here::here("r", "data_prep_subs", "sub_econ_national.r")) # needs sfy_startmonths in memory
 # load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
 
