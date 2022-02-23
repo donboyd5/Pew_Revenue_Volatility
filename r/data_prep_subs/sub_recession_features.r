@@ -1,24 +1,26 @@
+# This subprogram prepares data about the features (characteristics)
+# of recessions.
+
+# inputs:
+#   bdata::recessions
+
+
 # package bdata has NBER recession dates
 # they are pulled from the NBER recessions page, updated in July 2021
 # https://www.nber.org/research/data/us-business-cycle-expansions-and-contractions
 # see my github page https://github.com/donboyd5/bdata
 # particularly https://github.com/donboyd5/bdata/blob/master/DataConversionPrograms/bdata_recessions.R
 # data(package="bdata")
-# comment(recessions)
 # recessions # 1857, ..., 2020
 
 
+# mark recessions ---------------------------------------------------------
 
-# capgains, agi,
-# rec_qtrs, rec_fyears, rec_features,
-
-
-# mark_recessions
-#.. create data frame with each quarter as peak, trough, expand, or contract
+#.. create data frame with each quarter as peak, trough, expand, or contract ----
 firstdate <- as.Date("1947-01-01")  # min(cigxm1$date)
 lastdate <- as.Date("2022-07-01") # max(cigxm1$date) + years(1) # allow an extra year
 
-ptrecs <- recessions %>%
+ptrecs <- bdata::recessions %>%
   filter(!is.na(rec_year)) %>%
   select(rec_year, peak=peak_quarter, trough=trough_quarter) %>%
   pivot_longer(-c(rec_year), names_to="qtype", values_to = "date")
@@ -39,9 +41,10 @@ rec_qtrs <- tibble(date=seq(firstdate,
   mutate(rec_year=ifelse(qtype != "expand", rec_year, NA_character_))
 # CAUTION: the 2020 recession had a peak quarter (2020q1), and a trough
 # quarter(2020q2), with no contraction quarter in between. Make sure when
-# selecting recession quarters to select the contract, and trough
+# selecting recession quarters to select the contraction AND trough
 # quarters. I think best NOT to select the peak quarter, too, but think
 # more about this.
+
 
 #.. collapse quarters to fiscal years ----
 # assuming recession if at least 1 quarter is recession
@@ -61,18 +64,25 @@ rec_fyears <- rec_qtrs %>%
 # manuf emp % change
 # cg % change
 
-rec_duration <- recessions %>%
-  filter(rec_year >= 1969) %>%
-  mutate(duration=interval(peak, trough) %/% months(1)) %>%
-  select(recyear=rec_year, peak=peak_quarter, trough=trough_quarter, duration)
 
-rec_peaktrough <- rec_duration %>%
-  select(-duration) %>%
+#.. get df with peak and trough quarter of each recession ----------------
+rec_peaktrough <- bdata::recessions %>%
+  filter(rec_year >= 1969) %>%
+  select(recyear=rec_year, peak=peak_quarter, trough=trough_quarter) %>%
   pivot_longer(c(peak, trough), names_to = "qtype", values_to = "date")
 
-# rgdp and rpce
+
+#.. duration of each recession, in months --------------------------------
+rec_duration <- bdata::recessions %>%
+  filter(rec_year >= 1969) %>%
+  mutate(duration=interval(peak, trough) %/% months(1)) %>%
+  select(recyear=rec_year, duration) # peak=peak_quarter, trough=trough_quarter, 
+
+
+#.. real gdp (rgdp) and real personal consumtion (rpce) for each recession ----
+cigxmq <- readRDS(here::here("data", "details", "cigxmq.rds"))
 rec_nipa <- rec_peaktrough %>%
-  left_join(cigxm %>%
+  left_join(cigxmq %>%
               filter(valtype=="chain", name %in% c("rgdp", "rpce")),
             by = "date") %>%
   select(recyear, qtype, name, value) %>%
@@ -81,7 +91,7 @@ rec_nipa <- rec_peaktrough %>%
   select(recyear, name, pch) %>%
   pivot_wider(values_from = pch)
 
-unrate <- readRDS(here::here("raw_data", "unrate.rds"))
+unrate <- readRDS(here::here("raw_data", "bls", "unrate.rds"))
 rec_unrate1 <- unrate %>%
   arrange(date) %>%
   select(date, unrate=value) %>%
@@ -99,7 +109,7 @@ rec_unrate <- rec_unrate1 %>%
   pivot_wider(names_from = qtype) %>%
   mutate(urchange=trough - peak)
 
-# for cap gains, get the 
+# cap gains
 rec_cg <- capgains %>%
   arrange(year) %>%
   # cgmaxpre will trigger a warning but it's ok we want to use this period
@@ -115,7 +125,6 @@ rec_cg
 
 # combine the recession files
 rec_features <- rec_duration %>%
-  select(-peak, -trough) %>%
   left_join(rec_nipa, by = "recyear") %>%
   left_join(rec_unrate %>%
               select(recyear, urchange), 
@@ -124,3 +133,8 @@ rec_features <- rec_duration %>%
               select(recyear=year, cgpch), 
             by = "recyear")
 rec_features  
+
+# rec_qtrs, rec_fyears, rec_features,
+save(rec_features,
+     file = here::here("data", "recession_features.RData"))
+

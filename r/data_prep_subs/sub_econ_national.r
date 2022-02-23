@@ -1,6 +1,13 @@
 
 # econ_national.RData ---------------------------------------
 
+# This file gets and prepares national economic data which is handled
+# in a separate program.
+
+# As of now, this only gets:
+#   nominal gdp
+#   gdp price index
+
 # My package BEAData includes virtually all major data from the Bureau of
 # Economic Analysis (BEA) in relation to the National Income and Products
 # Accounts (NIPA) and in relation to regional data.
@@ -16,26 +23,20 @@
 # create and save 3 data frames:
 #    national GDP (nominal), state fiscal year basis
 #    GDP price index, state fiscal year basis
-#    CIGXM chained dollar GDP (or, for certain early data, quantity indexes)
-#       quarterly basis, for characterizing recessions
-#       where GDP = C + I + G + (X - M)
-#             C = consumption
-#             I = investment
-#             G = government
-#         X - M = exports minus imports
+
 
 #.. determine desired variables ----
 # use quarterly data as they are easy to convert to a July 1 typical state fiscal year
-glimpse(nipa)
+glimpse(BEAData::nipa)
 
 # which variable name (i.e., vname) is current dollar GDP?
-nipa %>%
+BEAData::nipa %>%
   filter(freq=="Q", str_detect(vdesc, "Gross domestic product, Current")) %>%
   group_by(vname, vdesc) %>%
   filter(date==max(date))
 
 # which vname is the gdp price index?
-nipa %>%
+BEAData::nipa %>%
   # filter(vname=="A191RG")
   filter(freq=="Q", 
          str_detect(vdesc, "Gross domestic product"),
@@ -48,7 +49,7 @@ nipa %>%
 #   A191RG US GDP price index
 
 #.. nominal gdp on typical July 1 state fiscal year basis ----
-gdpfy <- nipa %>%
+gdpfy <- BEAData::nipa %>%
   filter(vname=="A191RC", freq=="Q") %>%
   # CAUTION: I do NOT bother to adjust for the fact that 4 states have
   # other-than-July-1 fiscal years:
@@ -67,7 +68,7 @@ gdpfy %>% ht  # 1947, 2021
 # a different base year would not affect results, but 2021
 # is more intuitive than a different year
 baseyear <- 2021 
-gdppi <- nipa %>%
+gdppi <- BEAData::nipa %>%
   filter(vname=="A191RG", freq=="Q") %>%
   # fix NY AL MI TX
   mutate(fyear=ifelse(month(date) >= 7, year + 1, year) %>% as.integer) %>%
@@ -78,12 +79,23 @@ gdppi <- nipa %>%
   mutate(igdppi=gdppi[year==baseyear] / gdppi) 
 summary(gdppi)
 
+# save econ_national.RData ------------------------------------------------
+save(gdpfy, gdppi,
+     file = here::here("data", "econ_national.RData"))
 
-#.. CIGXM ----
-# get quarterly CIGXM data (components of GDP) from NIPA Table 1.1.6
-#    GDP = C + I + G + (X - M)
+
+
+# CIGXM for recession features ----
+#    CIGXM chained dollar GDP (or, for certain early data, quantity indexes)
+#       quarterly basis, for characterizing recessions
+#       where GDP = C + I + G + (X - M)
+#             C = consumption
+#             I = investment
+#             G = government
+#         X - M = exports minus imports
+
 # Table 1.1.6. Real Gross Domestic Product, Chained Dollars
-tab <- NIPAvars %>%
+tab <- BEAData::NIPAvars %>%
   filter(tabnum == "1.1.6") %>%
   arrange(line)
 tab
@@ -110,7 +122,7 @@ xwalk
 
 
 # get NIPA quarterly data (chained dollars) for the xwalk variables
-cigxmchain <- nipa %>%
+cigxmchain <- BEAData::nipa %>%
   filter(freq=="Q", vname %in% xwalk$vname) %>%
   right_join(xwalk %>% select(vname, name), by="vname")
 glimpse(cigxmchain)
@@ -120,7 +132,7 @@ count(cigxmchain, name, vname, vdesc)
 # we can go back further using quantity indexes - good for growth rates but not
 # relative importance of variables (indexed to 2012=100)
 # Table 1.1.3. Real Gross Domestic Product, Quantity Indexes
-tabqi <- NIPAvars %>%
+tabqi <- BEAData::NIPAvars %>%
   filter(tabnum == "1.1.3") %>%
   arrange(line)
 tabqi
@@ -142,7 +154,7 @@ B822RA, Government, rgov, G
 xwalkqi
 # get NIPA quarterly data
 
-cigxmqi <- nipa %>%
+cigxmqi <- BEAData::nipa %>%
   filter(freq=="Q", vname %in% xwalkqi$vname) %>%
   right_join(xwalkqi %>% select(vname, name), by="vname") %>%
   mutate(vname=factor(vname, levels=xwalkqi$vname)) %>%
@@ -151,12 +163,11 @@ glimpse(cigxmqi)
 count(cigxmqi, vname)
 count(cigxmqi, vname, name, vdesc)
 
-#.. combine the chained cigxm data and the quantity indexed data ----
-cigxm <- bind_rows(cigxmchain %>% 
+#.... combine the chained cigxm data and the quantity indexed data ----
+cigxmq <- bind_rows(cigxmchain %>% 
                      mutate(valtype="chain"),
                    cigxmqi %>%
                      mutate(valtype="qidx"))
 
-save(gdpfy, gdppi,
-     cigxm,
-     file = here::here("data", "econ_national.RData"))
+saveRDS(cigxmq, here::here("data", "details", "cigxmq.rds"))
+

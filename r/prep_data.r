@@ -1,5 +1,24 @@
 # Data prep for state tax revenue volatility
 
+# This program prepares most of the data needed in the volatility analysis.
+
+# The basic idea is:
+#   for each category of data -- for example:
+#     national economy,
+#     state economy,
+#     state tax revenue
+#   retrieve the data -- possibly multiple sources for a category
+#   put it into a uniform format -- generally with the following columns
+#     year (generally state fiscal year)
+#     stabbr (state abbreviation)
+#     name (e.g., variable name)
+#     value -- in xxs of dollars, if it is a money variable
+#   save the data frames for a given category in an RData file for the category
+
+# This makes it easy to retrieve the category files and "stack" several
+# data frames on top of each other, since they all have the same format.
+
+
 
 # define system-specific variables (e.g., folders) ------------------------
 # load or define system-specific constants
@@ -37,7 +56,7 @@ tidyverse_conflicts()
 # ONETIME download data -------------------------------
 # CAUTION:
 
-#   The following programs download files from the internet and save them
+#   sub_ONETIME_downloads.r downloads files from the internet and saves them
 #   in the raw_data project directory.
 
 #   If you do this you may download revised versions of data and get slightly
@@ -47,14 +66,17 @@ tidyverse_conflicts()
 #   files I have downloaded, which are already stored in the project.
 
 #   Thus, do not do the following unless you don't mind getting 
-#   some different numbers...
+#   different numbers.
 
 # source(here::here("r", "data_prep_subs", "sub_ONETIME_downloads.r"))
 
-# In an emergency, you can retrieve copies of the original 
-# versions of the data from here:
+# In an emergency (if you overwrite files I previously downloaded), you can
+# retrieve copies of the original versions of the data from here:
 
 #    .../raw_data/backup_ONETIME_data/
+
+# just copy the files into the right subdirectories.
+
 
 
 # "sub_..." r files that create the data -----------------------------
@@ -86,8 +108,18 @@ source(here::here("r", "data_prep_subs", "sub_capgainsagi.r")) # needs sfy_start
 # econ_national.RData -----------------------------------------------------
 # inputs:  BEAData::nipa
 # outputs: data/econ_national.RData
+#          data/details/cigxmq.rds -- quarterly, for recession features
 source(here::here("r", "data_prep_subs", "sub_econ_national.r")) # needs sfy_startmonths in memory
 # load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
+
+
+# recession_features.RData -----------------------------------------------------
+# inputs:  BEAData::nipa
+#          bdata::recessions
+#          data/details/cigxmq.rds
+# outputs: data/rec_features.RData
+source(here::here("r", "data_prep_subs", "sub_recession_features.r")) # needs sfy_startmonths in memory
+# load(file = here::here("data", "recession_features.RData"), verbose=TRUE)
 
 
 # gdp_state.RData ---------------------------------------------------------------

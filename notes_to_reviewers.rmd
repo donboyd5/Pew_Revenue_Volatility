@@ -23,11 +23,9 @@ output:
 
     -   a recent version of RStudio installed
 
-        -   I ran this with daily build `RStudio-2022.02.0-432` (see [here](https://dailies.rstudio.com/) but you should be able to run everything with the latest released version
-
-        -   If any troubles, please email me ([mailto:donboyd5\\\@gmail.com](mailto:donboyd5@gmail.com){.uri})
+    -   if any troubles, please email [me](mailto:donboyd5@gmail.com)
 -   copy the entire project directory `Pew_Revenue_Volatility` from the share drive to your machine
--   open the file `constants_system.r` in the `r` folder of the project - **(I recommend doing this with a text editor at this point, rather than opening it in RStudio, as that will trigger actions you might rather not have happen yet - nothing fatal, but you'll be waiting for those actions to end before you can proceed)**
+-   using a text editor, open `constants_system.r` (it is in the `r` folder of the project) - **(I recommend doing this with a text editor at this point, rather than opening it in RStudio, as that will trigger actions you might rather not have happen yet - nothing fatal, but you'll be waiting for those actions to end before you can proceed)**
     -   you will see my system-specific information:
 
         -   global directory names mapped to folder locations on my computer
@@ -38,8 +36,14 @@ output:
 
         -   map directories on your computer, with whatever names you want, to the global variables in `constants_system.r`; as of this writing, the global variables are `beadir`, `qcewdir`, and `scratchdir` but there could be more or different global variables by the time you read this
 
-        -   if you don't have a FRED API key you can either use mine or just put in any old string I think - so that you have the exact data I have, you can use the data I provide with the project - in other words, best NOT to download new data from FRED anyway because data may have been revised (very slightly) after I last downloaded it
--   copy data from the share drive `data` subdirectories to the directories you are using
+        -   if you don't have a FRED API key you can either keep mine uncommented in the `constants_system.r` file or put in any old string in
+
+            -   I have preloaded certain data from FRED (Federal Reserve Economic Data) and stored it in the project (just the unemployment rate, I think) and commented-out the download code, so you don't need the FRED key unless you decide to download that data yourself
+
+            -   if you do so, you can use my key or use your own
+
+            -   if you do so you may get slightly different numbers than me, if the data have been revised since I downloaded them
+-   copy data from the share drive `data` subdirectories to the directories you are using (the directories you named in `constants_system.r`)
     -   if your review requires you to go to the original source of these files:
 
         -   I'd suggest you do that after first running things using the data I downloaded and put in these directories
@@ -56,7 +60,7 @@ output:
 
 -   wait for it to finish examining the packages the project uses
 
-    -   when I did this to check transferring from one computer to another it gave me warnings about `DESCRIPTION` files missing from 9 packages
+    -   when I did this to verify that I can transfer from one computer of mine to another it gave me warnings about `DESCRIPTION` files missing from 9 packages
 
     -   I went ahead with the next step anyway and all worked
 
@@ -70,57 +74,61 @@ output:
 
 # Check the setup
 
--   open `libs_base.r` in the `r` folder
+-   from within RStudio, open `libs_base.r`, which is in the `r` folder
 
-    -   step through the `library(…)` statements one by one, making sure each library is installed; when I did this, there were no errors or warnings
+    -   step through (execute) the `library(…)` statements one by one, making sure each library is installed and can load; when I did this on my transferee computer, there were no errors or warnings
 
-    -   this step will install several packages that I created; they should install without trouble; if you want to verify how they were constructed, check the project directory `renv/local`, which has the source code for each package; also, [<https://github.com/donboyd5>]
+    -   in addition to official CRAN packages, this step will install several packages that I created; they should install without trouble; if you want to verify how they were constructed, check the project directory `renv/local`, which has the source code for each package; also, they are [here](https://github.com/donboyd5)
 
-        -   `bdata` - includes two data frames I created: `sgtax.a` (annual state government tax data from the U.S. Bureau of the Census) and `recessions` (official recession dates from the National Bureau of Economic Research); code in the data-raw directory downloads and gets the data; I would not recommend updating any data
+        -   `bdata` - includes two data frames I created: `sgtax.a` (annual state government tax data from the U.S. Bureau of the Census) and `recessions` (official recession dates from the National Bureau of Economic Research)
+
+            -   code that is in the data-raw directory of the `bdata` package (if you go to the source) downloads and gets the data; I would not recommend doing this; if you want to check the data, instead I would suggest spot-checking some numbers against the Census website; there are other ways to check, also; if you want thoughts on that, please let me know
 
         -   `bggtools` - selected functions and themes to use with the package `ggplot2`; simple stuff - I don't think you'll feel a need to do anything with this
 
         -   `bmaps` - has two data frames I created, with longitude/latitude for the U.S.: `states49`, which has long/lat for the 48 continental states and DC, and `states51`, with long/lat for the 50 states, with AK and HI as insets below the continental U.S., plus DC (I use `states51` in the project)
 
-        -   `btools` - miscellaneous utility and statistical functions; nothing to do here; if you want to see a function, just type its name at the console --- e.g., typing "ht" will show you that `ht` is a function that displays the head and the tail of an objet
+        -   `btools` - miscellaneous utility and statistical functions; nothing to do here; if you want to see a function, just type its name at the console --- e.g., typing "ht" will show you that `ht` is a function that displays the head and the tail of an object
 
-        -   `BEAData` - includes the data frame `nipa`, which I created from data I downloaded from the BEA site; it has annual, quarterly, and monthly data from the National Income and Products Accounts (NIPA) from the U.S. Bureau of Economic Analysis; if you type `comment(nipa)` it will tell you the download date; I try to follow this convention for most data files in packages
+        -   `BEAData` - includes the data frame `nipa`, which I created from data I downloaded from the BEA site; it has annual, quarterly, and monthly data from the National Income and Products Accounts (NIPA) from the U.S. Bureau of Economic Analysis; if you type `comment(nipa)` it will tell you the download date; I try to follow this convention for most data files in packages; the source code for the package downloads and parses BEA data
 
         -   `BLSdata` - monthly data from the U.S. Bureau of Labor Statistics; this project uses ...
 
         -   `qtax` - quarterly tax revenue data from the U.S. Bureau of the Census; has the data frame `qtax`, which has data I downloaded from the Census web site
 
--   repeat with `libs_ts.r`; these, too, should install without trouble
+-   repeat with `libs_ts.r`; these are packages for dealing with time-series data; I did not write any of them so it should be straightforward; they, too, should install without trouble
 
 # Data preparation
 
 -   open `prep_data.r` in the `r` project folder
 
--   you'll see my notes about how to navigate the code efficiently
+    -   you'll see my notes about how to navigate the code efficiently
 
--   the program loads subprograms to accomplish major tasks
+    -   the program loads subprograms to accomplish major tasks
 
-    -   gather, organize and save major categories of data
+        -   gather, organize and save major categories of data
 
-    -   "stack" the separate data files
+        -   "stack" the separate data files
 
-    -   construct volatility measures
+        -   construct volatility measures
 
--   the major gathering, organizing, and saving tasks are
+    -   the major gathering, organizing, and saving tasks are
 
-    -   general data
+        -   general data
 
-    -   capital gains and agi data
+        -   capital gains and agi data
 
-    -   national economic data
+        -   national economic data
 
-    -   state gdp data
+        -   state gdp data
 
-    -   tax data
+        -   tax data
 
--   step through the program bit by bit - do not try to run it all at once (although that will work, if your goal is to look at the final result)
+    -   step through the program bit by bit - do not try to run it all at once (although that will work, if your goal is to look at the final result)
 
--   this will create the RData files needed for the analysis program
+    -   this will create the RData files needed for the analysis program
+
+-   
 
 # Analysis
 
