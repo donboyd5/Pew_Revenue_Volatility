@@ -50,10 +50,15 @@ episodes <- function(x, f="mean"){
 # }
 
 
-hptrend <- function(vec, type="lambda", smooth=6.25){
+hptrend <- function(x, type="lambda", smooth=6.25, minlen=10){
   # Hodrick-Prescott (HP) filter
-  # vec: vector of time series data, in order, no missing values
+  # x: vector of time series data, in order, no missing values
   # returns: trend vector
+  
+  # this is intended to be robust in the sense that:
+  #   it trims any leading or trailing NA values - but keeps track of them
+  #   it approximates any interior NA values so that hpfilter will work
+  #   it adds back any leading or trailing NA values to the trend
   
   # when type="lambda" freq is the lambda parameter for the HP filter
   # 6.25 is commonly recommended for annual data; see:
@@ -62,15 +67,34 @@ hptrend <- function(vec, type="lambda", smooth=6.25){
   # for the Frequency of Observations.” Review of Economics and Statistics 84,
   # no. 2 (May 2002): 371–76. https://doi.org/10.1162/003465302317411604.
   
+  if(sum(x > 0, na.rm=TRUE) < minlen) return(NA_real_)
+  
   # if statement allows HP for a percent change where first element is NA
-  if(is.na(vec[1])){
-    vts <- ts(vec[-1])
-  } else vts <- ts(vec)
+  if(is.na(x[1])){
+    vts <- ts(x[-1])
+  } else vts <- ts(x)
   
-  vts_hp <- hpfilter(vts, freq=smooth, type=type, drift=FALSE)
+  # fill any missing values in the interior via interpolation
+  # do NOT fill values on the ends
+  vts_filled <- zoo::na.approx(vts, na.rm=FALSE)
   
-  trend <- as.numeric(vts_hp$trend)
-  if(is.na(vec[1])){
+  # remove any leading or trailing NA values and keep track
+  vts_ltrim <- zoo::na.trim(vts_filled, sides="left")
+  na_left <- length(vts_filled) - length(vts_ltrim)
+  
+  vts_fulltrim <- zoo::na.trim(vts_ltrim, sides="right")
+  na_right <- length(vts_ltrim) - length(vts_fulltrim)
+
+  # this should always work as we have a time series with no NA values
+  vts_hp <- hpfilter(vts_fulltrim, freq=smooth, type=type, drift=FALSE)
+  
+  trend_trimmed <- as.numeric(vts_hp$trend)
+  # addback the trimmed NA values
+  trend <- c(rep(NA_real_, na_left),
+             trend_trimmed,
+             rep(NA_real_, na_right))
+  
+  if(is.na(x[1])){
     trend <- c(NA, trend)
   } 
   trend

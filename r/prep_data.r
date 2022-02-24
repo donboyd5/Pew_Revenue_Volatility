@@ -43,10 +43,7 @@ tidyverse_conflicts()
 
 # get functions -----------------------------------------------------------
 # at present no additional functions are needed
-# source(here::here("r", "functions_maps.r"))
-# source(here::here("r", "functions_measures.r"))
-# source(here::here("r", "functions_plots.r"))
-# source(here::here("r", "functions_utility.r"))
+
 
 # NOTE: If a section name starts with "ONETIME", it creates and
 # saves data that will later be read from files. The data only need to
@@ -135,8 +132,9 @@ source(here::here("r", "data_prep_subs", "sub_censustax.r"))
 # outputs:
 #   data/details/census_clean_tax.rds
 
+# This next step must be done AFTER censustax because censustax is an input
 source(here::here("r", "data_prep_subs", "sub_censustax_rateadjust.r"))
-# inputs: data/details/census_clean_tax.rds
+# inputs: data/details/censustax.rds
 # outputs: data/details/census_gstiitadj.rds
 
 source(here::here("r", "data_prep_subs", "sub_pewtax.r"))
@@ -144,12 +142,12 @@ source(here::here("r", "data_prep_subs", "sub_pewtax.r"))
 # outputs: data/details/census_gstiitadj.rds
 
 source(here::here("r", "data_prep_subs", "sub_gstbase.r"))
-# inputs:
-# outputs:
+# inputs: TPC data
+# outputs: data/details/gstbase_details.rds, data/details/gstbase.rds
 
 source(here::here("r", "data_prep_subs", "sub_taxdata.r"))
 # inputs: in data/details:
-#   census_clean_tax.rds
+#   censustax.rds
 #   census_gstiitadj.rds
 #   pewtax.rds
 #   gstbase.rds
@@ -157,18 +155,28 @@ source(here::here("r", "data_prep_subs", "sub_taxdata.r"))
 load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
 
 
+
+
+# do a quick check to make sure the shares add approximately to 1
+# sharesums <- taxshares %>%
+#   select(-tottax) %>%
+#   pivot_longer(-c(stabbr, year)) %>%
+#   group_by(stabbr, year) %>%
+#   summarise(sum=sum(value), .groups="drop")
+# all.equal(sharesums$sum, rep(1, nrow(sharesums)))  # checks whether the sums==1, within a tolerance
+# quantile(sharesums$sum)
+# sharesums %>% filter(sum < .99)  # we have 19 that are < .99; CO 2019 is the only concerning one
+# rm(sharesums)
+
+
 # load data -- only for testing purposes -----------------------------
 # DO NOT RUN UNTIL AFTER FILES HAVE BEEN CREATED
 # useful for verifying that what's in each file is what's intended
 load(file = here::here("data", "general.RData"), verbose=TRUE)
 load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
+load(file = here::here("data", "recession_features.RData"), verbose=TRUE)
+load(file=here::here("data", "capgainsagi.RData"), verbose=TRUE)
 # load(file = here::here("data", "econ_state.RData"), verbose=TRUE)
 load(file = here::here("data", "gdp_state.RData"), verbose=TRUE)
 load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
-
-
-# source(here::here("r", "data_prep_subs", "sub_qcew_state.r"))
-# load(file = here::here("data", "sub_qcew_state.RData"), verbose=TRUE)
-# save(qcew_slim, file = here::here("data", "qcew_state.RData"))
-
 

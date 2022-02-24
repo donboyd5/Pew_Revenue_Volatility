@@ -3,7 +3,7 @@
 ## State sales tax bases
 # Table 2.4.5U. Personal Consumption Expenditures by Type of Product
 tpcfn <- "TPC State Sales Tax Mapping.xlsx"
-tpc_namerows <- read_excel(here::here("raw_data", tpcfn), sheet="Tax treatment by PCE", range="E3:BD5")
+tpc_namerows <- read_excel(here::here("raw_data", "tpc", tpcfn), sheet="Tax treatment by PCE", range="E3:BD5")
 tpc_namerows
 colnames <- tpc_namerows %>%
   filter(row_number()==1) %>%
@@ -11,7 +11,7 @@ colnames <- tpc_namerows %>%
   unlist(., use.names=FALSE)
 colnames
 
-tpcdf <- read_excel(here::here("raw_data", tpcfn), sheet="Tax treatment by PCE", range="A11:BD117",
+tpcdf <- read_excel(here::here("raw_data", "tpc", tpcfn), sheet="Tax treatment by PCE", range="A11:BD117",
                     col_names=c("line", "level", "pcename",  "tpc_id", "tpc_category", colnames))
 tpcdf
 glimpse(tpcdf)
@@ -26,7 +26,7 @@ stmap %>% filter(stabbr=="NY")
 
 # we need a mapping between the tpc line numbers and the new bea line numbers
 remapfn <- "TPC_NIPA_remapped.xlsx"
-remap <- read_excel(here::here("raw_data", remapfn), sheet="remap", range="A7:J116",
+remap <- read_excel(here::here("raw_data", "tpc", remapfn), sheet="remap", range="A7:J116",
                     col_names=TRUE)
 glimpse(remap)
 tail(remap)

@@ -12,6 +12,24 @@ output:
     number_sections: yes
 ---
 
+# Overview
+
+1.  Set your system up
+
+2.  Set the RStudio `Pew_Revenue_Volatility` project up
+
+3.  Check the setup
+
+4.  Data preparation - step through each of the following, line by line
+
+    1.  Run `prep_data.r` to prepare many individual files
+
+    2.  Run `prep_vbase.r` to prepare the main state-tax-year data file, vbase
+
+    3.  Run `prep_vol.r` to prepare summary volatility estimates by state, tax, and time period
+
+5.  Run `Pew_Tax_Revenue_Volatility.rmd` chunk by chunk
+
 # System setup
 
 -   make sure that you can find in the share drive
