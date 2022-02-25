@@ -44,9 +44,23 @@ BEAData::nipa %>%
   group_by(vname, vdesc) %>%
   filter(date==max(date))
 
-# It is clear that we want:
+# which vname is personal income? I want this on cy basis
+BEAData::nipa %>%
+  filter(freq=="A", str_detect(vdesc, coll("personal income", ignore_case = TRUE))) %>%
+  group_by(vname, vdesc) %>%
+  filter(date==max(date))
+
+# which vname is disposable personal income? I want this on cy basis
+BEAData::nipa %>%
+  filter(freq=="A", str_detect(vdesc, coll("disposable personal income", ignore_case = TRUE))) %>%
+  group_by(vname, vdesc) %>%
+  filter(date==max(date))
+
+# We want:
 #   A191RC US nominal gdp
 #   A191RG US GDP price index
+#   A065RC US nominal personal income
+#   A067RC US nominal disposable personal income
 
 #.. nominal gdp on typical July 1 state fiscal year basis ----
 gdpfy <- BEAData::nipa %>%
@@ -79,8 +93,23 @@ gdppi <- BEAData::nipa %>%
   mutate(igdppi=gdppi[year==baseyear] / gdppi) 
 summary(gdppi)
 
+# I want personal income on a calendar year basis because later we'll compare it to agi
+# also on cy basis
+pi <- BEAData::nipa %>%
+  filter(vname=="A065RC", freq=="A") %>%
+  select(year, pi=value)
+ht(pi)
+
+# now disposable pi, also cy
+dpi <- BEAData::nipa %>%
+  filter(vname=="A067RC", freq=="A") %>%
+  select(year, di=value)
+ht(dpi)
+
+
+
 # save econ_national.RData ------------------------------------------------
-save(gdpfy, gdppi,
+save(gdpfy, gdppi, pi, dpi,
      file = here::here("data", "econ_national.RData"))
 
 

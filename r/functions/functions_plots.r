@@ -30,7 +30,7 @@ p1f <- function(df, title, colors,
     ggtitle(title,
             subtitle=subtitle) +
     theme_report +
-    nolegend_title
+    legend_notitle
   p1
 }
 # p1f(df2, title="Gross domestic product", colors=c("blue", "red"))
@@ -58,7 +58,7 @@ p2f <- function(df, title, colors,
     ggtitle(title,
             subtitle="Annual percent change") +
     theme_report +
-    nolegend_title
+    legend_notitle
   p2
 }
 # p2f(df2, title="Gross domestic product", colors=c("blue", "red"))
@@ -73,7 +73,7 @@ p3f <- function(df, title,
     ggplot(aes(year, pdtrend)) +
     geom_hline(yintercept = 0) +
     geom_bar(stat = "identity", aes(fill = posneg)) + 
-    scale_fill_manual(values=c("red", "blue")) +
+    scale_fill_manual(values=rev(bluered)) +
     scale_x_continuous(name=NULL, breaks=seq(1950, 2050, xinterval), limits=xlims) +
     scale_y_continuous(name="% difference from trend",
                        breaks=c(0, seq(-1, 1, yinterval)), 
@@ -82,7 +82,7 @@ p3f <- function(df, title,
     ggtitle(title,
             subtitle="Percent difference from trend") +
     theme_report +
-    nolegend
+    legend_none
   p3
 }
 # p3f(caiit, title="California income tax")

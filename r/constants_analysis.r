@@ -9,7 +9,8 @@ last20 <- "2000-2020"
 
 #.. colors ----
 # https://colorbrewer2.org/
-bluered <- c("blue", "#a50f15")  # #a50f15 darkred
+darkred <- "#a50f15"
+bluered <- c("blue", darkred)  # #a50f15 darkred
 bluegreen <- c("blue", "darkgreen")
 
 

@@ -155,8 +155,6 @@ source(here::here("r", "data_prep_subs", "sub_taxdata.r"))
 load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
 
 
-
-
 # do a quick check to make sure the shares add approximately to 1
 # sharesums <- taxshares %>%
 #   select(-tottax) %>%

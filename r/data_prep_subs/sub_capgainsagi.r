@@ -7,17 +7,21 @@
 # see spreadsheet for further details on sources
 fn <- "NationalCapitalGains.xlsx"
 sheet <- "CapGains"
-capgains <- read_excel(here::here("raw_data", "soi", fn), sheet=sheet, range="A5:B83", 
+capgains1 <- read_excel(here::here("raw_data", "soi", fn), sheet=sheet, range="A5:B83", 
                        col_types = c())
-capgains <- capgains %>%
+
+capgains2 <- capgains1 %>%
   mutate(year=as.integer(year),
          capgains=capgains * 1000)  # put it in millions of dollars
-glimpse(capgains)
-summary(capgains)  # 1954-2031
-# saveRDS(agi, here::here("raw_data", "soi", "capgains.rds"))
+glimpse(capgains2)
+summary(capgains2)  # 1954-2031
+
+capgains <- capgains2 %>%
+  filter(year <= 2020)
 
 
-# create agi time series --------------------------------------------------
+# create agi time series directly from IRS data -----------------------------------------
+# This is agi only not its components
 # $ billions
 agi1 <- read_excel(here::here("raw_data", "soi", "histab6.xls"),
                    col_names = c("year", "aginipa", "agi"),
@@ -34,7 +38,7 @@ agi2b <- agi2a %>%
   pivot_longer(cols=everything(), names_to = "year", values_to = "agi") %>%
   mutate(year=as.integer(year), agi=as.numeric(agi))
 
-# combine
+# combine and put in $ millions
 agi3 <- bind_rows(
   agi1 %>%
     select(year, agi) %>%
@@ -60,8 +64,41 @@ agi <- agi3 %>%
 # rm(agi1, agi2, agi2a, agi2b, agi3)
 
 
+# agi data from TPC -------------------------------------------------------
+# TPC is the Urban-Brookings Tax Policy Center
+# dsoi <- r"(E:\data\soi)"
+dsoi <- here::here("raw_data", "tpc")
+fn <- "historical_source_0.xlsx"
+fpath <- file.path(dsoi, fn)
+
+#.. ONETIME: download the TPC agi data ----
+# url <- "https://www.taxpolicycenter.org/file/185517/download?token=cYMr2RRH"
+# download.file(url, fpath, mode="wb")
+#.. END DOWNLOAD ----
+
+vnames <- c("year", "nret", "agi", "wages", "interest", "dividends",
+            "busincnet", "netcgll", "incother", "taxbc", "taxliab", "amt")
+tpc1 <- read_excel(fpath, 
+                   col_names = vnames,
+                   col_types = "text", 
+                   skip=6)
+glimpse(tpc1)
+ht(tpc1)
+
+agitpc <- tpc1 %>%
+  select(year, agi, wages, busincnet, netcgll) %>%
+  mutate(year=as.integer(year)) %>%
+  filter(year >= 1955) %>%
+  mutate(across(-c(year), as.numeric)) %>%
+  pivot_longer(-year) %>%
+  arrange(name, year)
+glimpse(agitpc)
+ht(agitpc)
+count(agitpc, name)
+
+
 # save data ---------------------------------------------------------------
-save(capgains, agi,
+save(capgains, agi, agitpc,
      file = here::here("data", "capgainsagi.RData"))
 
 

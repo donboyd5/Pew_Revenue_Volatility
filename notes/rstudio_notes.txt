@@ -13,3 +13,74 @@ always_allow_html: yes
     number_sections: yes
 
 
+
+<!-- alt-O collapse all folds -->
+
+<!-- alt-shift-O expand all folds -->
+
+<!-- <style> -->
+
+<!-- body .main-container { -->
+
+<!--   max-width: 1500px; -->
+
+<!-- } -->
+
+<!-- </style> -->
+
+<!-- Google drive -->
+
+<!-- https://drive.google.com/drive/folders/1fM7HIP7qrKbIdndF_wQ30WxVb1j_Cq06 -->
+
+
+<!--
+Workflow notes:
+
+# code folding:
+#   alt-L, alt-shift-L  one section
+#   alt-O, alt-shift-O  all sections
+#   ctrl-D run current code section (remapped from Ctrl-alt-T)
+
+# yaml notes:
+always_allow_html: yes
+
+  html_document:
+    toc: yes
+    toc_depth: '2'
+    df_print: paged
+    number_sections: yes
+
+# renv workflow:
+# to get it all started:
+# renv::init()
+
+# to remove it all:
+# renv::deactivate()
+# then delete the renv folder
+
+# periodically execute:
+# renv::status()
+# renv::snapshot()
+
+# to see what directory is being used by renv for local package sources, execute:
+# renv:::renv_paths_local()
+
+
+# git workflow:
+# when starting work from a different computer
+# - pull project from remote
+# git checkout -b issue-5  # create branch and checkout branch
+# Stage local changes, commit, check status:
+# git add foo.txt
+# git commit --message "A commit message"
+# git status
+
+# now merge
+# git checkout master
+# git merge issue-5
+
+# then push
+# git push
+
+-->
+

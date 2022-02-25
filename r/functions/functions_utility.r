@@ -1,7 +1,7 @@
 
 # general utility functions ----
 
-savefig <- function(basename, .p=p, .pdata=pdata, width=8, height=6, scale=1) {
+savefig <- function(basename, .p=p, .pdata=pdata, width=10, height=6, scale=1) {
   
   ggsave(filename = here::here("results", 
                                paste0(basename, ".png")),

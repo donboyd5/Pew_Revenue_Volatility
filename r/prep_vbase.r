@@ -56,12 +56,25 @@ gdppi_prep <- gdppi %>%
   mutate(stabbr="US", name="gdppi", realnom="price") %>%
   select(stabbr, name, realnom, year, value=gdppi)
 
+pi_prep <- pi %>%
+  mutate(stabbr="US", name="pi", realnom="nominal") %>%
+  select(stabbr, name, realnom, year, value=pi)
+
+dpi_prep <- dpi %>%
+  mutate(stabbr="US", name="dpi", realnom="nominal") %>%
+  select(stabbr, name, realnom, year, value=dpi)
+
+agi_prep <- agi %>%
+  mutate(stabbr="US", name="agi", realnom="nominal") %>%
+  select(stabbr, name, realnom, year, value=agi)
+
 cg_prep <- capgains %>%
   mutate(stabbr="US", name="capgains", realnom="nominal") %>%
   select(stabbr, name, realnom, year, value=capgains)
 glimpse(cg_prep)
 
-summary(cg_prep) # 1954-2031
+summary(cg_prep)
+
 
 
 #.. prep state GDP data ---------------------------------------------------
@@ -115,7 +128,7 @@ summary(gst_prep)  # 1929-2020
 
 # stack -------------------------------------------------------------------
 stack1 <- bind_rows(
-  gdpfy_prep, gdppi_prep, cg_prep,  # US economy
+  gdpfy_prep, gdppi_prep, pi_prep, dpi_prep, agi_prep, cg_prep,  # US economy
   sgdp_prep, gspsectors_prep, # maybe qcew_slim?? qcew_prep,  # state economies
   tax_prep, gst_prep) %>%  # state tax-related variables
   filter(year %in% 1959:2020) %>%
@@ -192,26 +205,3 @@ summary(vbase)
 saveRDS(vbase, here::here("data", "vbase.rds"))
 
 
-# OLD stuff -----
-
-# vbase_old <- readRDS(here::here("data", "vbase_old.rds"))
-# 
-# vcheck <- bind_rows(
-#   readRDS(here::here("data", "vbase.rds")) %>%
-#     mutate(type="new"),
-#   readRDS(here::here("data", "vbase_old.rds")) %>%
-#     mutate(type="old")) %>%
-#   select(stabbr, name, realnom, year, type, trend) %>%
-#   pivot_wider(names_from = type,
-#               values_from = trend) %>%
-#   mutate(diff=new - old,
-#          pdiff=diff / old) %>%
-#   arrange(-abs(pdiff))
-# 
-# vbase_old %>%
-#   filter(stabbr=="KY", realnom=="real", name=="sevtax") %>%
-#   select(year, value, trend) %>%
-#   pivot_longer(-year) %>%
-#   ggplot(aes(year, value, colour=name)) +
-#   geom_line() +
-#   geom_point()
