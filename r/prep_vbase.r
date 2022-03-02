@@ -106,31 +106,41 @@ count(gspsectors_prep, name)
 
 
 #.. prep state tax data --------------------------------------------------
-tax_prep <- bind_rows(censustax, census_gstiitadj) %>%
+# censustax: stabbr, name, year, value
+# census_gstiitadj: sgtabbr, name, year, value
+# pewtax
+pewtax_prep <- pewtax %>%
+  filter(vartype=="adjusted") %>%
+  select(stabbr, name=taxtype, year, value=level) %>%
+  mutate(name=paste0(name, "pew"), realnom="nominal") %>%
+  na.omit()
+count(pewtax_prep, name)
+
+centax_prep <- bind_rows(censustax, census_gstiitadj) %>%
   # we do not have gstadj data for the period excluded, so it is safe to do this
   filter(!(stabbr == "DE" & name == "gst")) %>% # only 3 obs, 1951-53
   # negative in 2014, maybe later figure out how to salvage this
   filter(!(stabbr == "OH" & name == "cit")) %>% 
   mutate(realnom="nominal")
 
-glimpse(tax_prep)
-summary(tax_prep)  # 1959-2020
+glimpse(centax_prep)
+summary(centax_prep)  # 1959-2020
 
 # gstbase, created in prep_data, maps BEA consumption components to state
 # sales tax bases
-gst_prep <- gstbase %>%
+gstbase_prep <- gstbase %>%
   filter(stabbr != "DC") %>%
   mutate(realnom="nominal") %>%
   select(stabbr, name, realnom, year, value)
-glimpse(gst_prep)
-summary(gst_prep)  # 1929-2020
+glimpse(gstbase_prep)
+summary(gstbase_prep)  # 1929-2020
 
 
 # stack -------------------------------------------------------------------
 stack1 <- bind_rows(
   gdpfy_prep, gdppi_prep, pi_prep, dpi_prep, agi_prep, cg_prep,  # US economy
   sgdp_prep, gspsectors_prep, # maybe qcew_slim?? qcew_prep,  # state economies
-  tax_prep, gst_prep) %>%  # state tax-related variables
+  centax_prep, pewtax_prep, gstbase_prep) %>%  # state tax-related variables
   filter(year %in% 1959:2020) %>%
   # drop any vectors that have no positive values
   group_by(stabbr, name, realnom) %>%

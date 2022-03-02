@@ -139,7 +139,7 @@ source(here::here("r", "data_prep_subs", "sub_censustax_rateadjust.r"))
 
 source(here::here("r", "data_prep_subs", "sub_pewtax.r"))
 # inputs: data/details/census_clean_tax.rds
-# outputs: data/details/census_gstiitadj.rds
+# outputs: data/details/pewtax.rds
 
 source(here::here("r", "data_prep_subs", "sub_gstbase.r"))
 # inputs: TPC data

@@ -103,7 +103,7 @@ ht(pi)
 # now disposable pi, also cy
 dpi <- BEAData::nipa %>%
   filter(vname=="A067RC", freq=="A") %>%
-  select(year, di=value)
+  select(year, dpi=value)
 ht(dpi)
 
 
@@ -111,7 +111,6 @@ ht(dpi)
 # save econ_national.RData ------------------------------------------------
 save(gdpfy, gdppi, pi, dpi,
      file = here::here("data", "econ_national.RData"))
-
 
 
 # CIGXM for recession features ----

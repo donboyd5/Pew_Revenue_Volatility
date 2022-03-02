@@ -14,7 +14,7 @@
 library(tidyverse)
 options(tibble.print_max = 80, tibble.print_min = 80) # if more than 60 rows, print 60 - enough for states
 # ggplot2 tibble tidyr readr purrr dplyr stringr forcats
-# library(purrr)
+library(glue)
 library(slider) # part of tidyverse
 library(fs)
 library(vctrs)
