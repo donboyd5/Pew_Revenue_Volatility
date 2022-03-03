@@ -515,7 +515,7 @@ savefig(basename="fig_gdppi_taxpdtrend")
 ```
 
 
-```{r include=TRUE, eval=TRUE}
+```{r fig_gdppi_tax_us, include=TRUE, eval=TRUE}
 
 count(vbase, name)
 vbase %>% filter(name=="gdppi")
@@ -826,6 +826,23 @@ savefig(basename="fig_pdtrend_taxtype_box")
 ```
 
 
+```{r tab_pdtrend_taxtype_box}
+
+tabdata <- vbase %>%
+  filter(year %in% 2000:2020, 
+         realnom=="nominal", 
+         name %in% taxnames$name,
+         stabbr != "US") %>%
+  group_by(name) %>%
+  summarise(pdtrendiqr=IQR(pdtrend, na.rm=TRUE), .groups="drop") %>%
+  arrange(desc(pdtrendiqr))
+
+# to be continued, maybe...
+# savetab(basename="tab_pdtrend_taxtype_box")
+
+```
+
+
 ```{r}
 glimpse(volall)
 count(volall, name)
@@ -882,7 +899,7 @@ pdata <- vbase %>%
   filter(name %in% vnames,
          realnom=="nominal",
          stabbr=="US",
-         year >= 1970) %>%
+         year >= 1960) %>%
   select(year, name, tax_pdtrend=pdtrend) %>%
   # tottax value on each record
   group_by(year) %>%
@@ -959,7 +976,67 @@ savefig("fig_all_pdtrend", .p=p, .pdata=pdata, width=10, height=6, scale=1.5)
 ```
 
 
-```{r tab_all_taxes}
+```{r tab_pdtrend_all_taxes}
+vorder <- c("tottax", "iit", "gst", "selsalestax", "cit", "sevtax", "othertax")
+
+tabbase <- vbase %>%
+  filter(name %in% vorder,
+         realnom=="nominal",
+         stabbr=="US",
+         year >= 1969) # so we can get lagged value
+
+shares <- taxshares %>%
+  filter(stabbr=="US", year==2020) %>%
+  select(-year) %>% 
+  pivot_longer(cols=-stabbr) %>%
+  mutate(share=ifelse(name=="tottax", 1, value))
+shares  
+shares %>% filter(name!="tottax") %>% summarise(sum(share))
+
+tabdata <- volall %>%
+  filter(period=="2000-2020", 
+         realnom=="nominal", 
+         stabbr=="US", 
+         name %in% taxnames$name)  %>%
+  left_join(shares %>% select(stabbr, name, share), 
+            by = c("stabbr", "name")) %>%
+  select(stabbr, period, realnom, name, namef, share, pdtrendiqr) %>%
+  arrange(namef)
+  
+tabdata
+
+tab <- tabdata %>%
+  select(namef, share, pdtrendiqr) %>%
+  gt() %>%
+  tab_header(
+    title = "Volatility by tax type for the U.S. as a whole",
+    subtitle = "Percent deviation from trend, 2000-2020"
+    ) %>%
+  cols_label(namef="Type of tax",
+             share=html("% share of<br>total tax<br>revenue (2020)"),
+             pdtrendiqr=html("% deviation<br>from trend (IQR)")) %>%
+  cols_align(
+    align = c("left"),
+    columns = namef) %>%
+  fmt_percent(
+    columns = c(share, share, pdtrendiqr),
+    decimals = 1) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "grey95")
+      ),
+    locations = cells_body(
+      rows=is.even(1:nrow(tabdata))
+      )
+    )
+tab
+
+savetab("tab_pdtrend_all_taxes")
+
+```
+
+
+```{r tab_all_taxes_multmeasures}
 
 # for each tax, get:
 #   share of total tax revenue in latest year
@@ -1063,7 +1140,7 @@ tab <- tabdata %>%
     )
 tab
 
-savetab("tab_all_taxes")
+savetab("tab_all_taxes_multmeasures")
 # 
 # level_order <- c("detail", "tottax")
 # # we want a df with level=(tottax, detail), taxtype=(iit, cit, ...othertax), and pdtrend
@@ -1173,12 +1250,21 @@ savefig("fig_pi_agi")
 
 ```{r fig_iit_sources_2panel}
 
-agivars <- c("agi", "wages", "busincnet", "netcgll")
+agivars <- c("agi", 
+             "wages", 
+             "busincnet", 
+             "netcgll", 
+             "other")
 agilabs <- c("Adjusted gross income", "Wages",
-             "Net business income",
-             "Net capital gains less losses")
+             "Business income",
+             "Capital gains",
+             "Other")
 
 pdata <- agitpc %>%
+  # calculate other
+  pivot_wider() %>%
+  mutate(other=agi - wages - netcgll - busincnet) %>%
+  pivot_longer(-year) %>%
   group_by(name) %>%
   mutate(trend=hptrend(value, smooth=6.25),
          dtrend=value - trend,
@@ -1187,15 +1273,20 @@ pdata <- agitpc %>%
   mutate(dtrendvsagi=dtrend / trend[name=="agi"],
          namef=factor(name, 
                       levels=agivars,
-                      labels=agilabs))
+                      labels=agilabs)) %>%
+  ungroup %>%
+  arrange(year, namef)
 
+capt1 <- "Source: IRS Statistics of Income via https://www.taxpolicycenter.org"
+note1 <- "Notes: Capital gains are net capital gains less losses. Business income is net of losses."
+capt <- paste0(capt1, "\n", note1)
 
-years <- min(pdata$year):max(pdata$year)
-recs <- recdata(years)
+recs <- recdata(unique(pdata$year))
 lsize <- .75
 psize <- .75
 
 p1 <- pdata %>%
+  filter(name != "other") %>%
   ggplot(aes(year, pdtrend, colour=namef)) +
   # put recession bands down before lines and dots
   geom_band(recs) +
@@ -1207,10 +1298,10 @@ p1 <- pdata %>%
                      labels=label_percent(accuracy=1)) +
   scale_colour_brewer(type="qual", palette="Set1") +
   ggtitle("Volatility of selected components of federal adjusted gross income",
-          subtitle="Component volatility as % of own trend")  +
+          subtitle="Percentage deviation from own trend")  +
   labs(x=NULL, 
        y="% of own trend",
-       caption="Source: IRS Statistics of Income via https://www.taxpolicycenter.org") +
+       caption=NULL) +
   theme_report +
   legend_notitle +
   caption_left
@@ -1218,6 +1309,7 @@ p1
 
 
 p2 <- pdata %>%
+  filter(name != "other") %>%
   ggplot(aes(year, dtrendvsagi, colour=namef)) +
   # put recession bands down before lines and dots
   geom_band(recs) +
@@ -1229,10 +1321,10 @@ p2 <- pdata %>%
                      labels=label_percent(accuracy=.1)) +
   scale_colour_brewer(type="qual", palette="Set1") +
   ggtitle("Volatility of selected components of federal adjusted gross income",
-          subtitle="Component volatility as % of AGI trend") +
+          subtitle="Deviation from own trend as % of AGI trend") +
   labs(x=NULL, 
        y="% of AGI trend",
-       caption="Source: IRS Statistics of Income via https://www.taxpolicycenter.org") +
+       caption=capt) +
   theme_report +
   legend_notitle +
   caption_left
@@ -1242,7 +1334,83 @@ p <- p1 / p2
 p
 savefig("fig_iit_sources_2panel", width=8, height=8)
 
+
+# capital gains as % of AGI, mentioned in the text
+pdata %>%
+  filter(name %in% c("agi", "netcgll")) %>%
+  select(year, name, value) %>%
+  pivot_wider() %>%
+  mutate(cgpct=netcgll / agi) %>%
+  summarise(mcgpct=median(cgpct, na.rm=TRUE),
+            mcgpct2000p=median(cgpct[year >= 2000], na.rm = TRUE)) 
+
 ```
+
+
+```{r tab_agi2010}
+# show 2010 data mentioned in the text, in a table
+# CAUTION: be sure pdata is the pdata defined immediately above
+tabdata <- pdata %>%
+  filter(year==2009) %>%
+  select(name, namef, value, trend, dtrend, pdtrend, dtrendvsagi) %>%
+  mutate(trendshare=trend / trend[name=="agi"],
+         volshare=dtrend / dtrend[name=="agi"])
+tabdata
+
+tab <- tabdata %>%
+  gt() %>%
+  cols_hide(name) %>%
+  tab_header(
+    title = "Adjusted gross income in 2010",
+    subtitle = NULL
+    ) %>%
+  cols_label(namef="Income component",
+             value="Actual",
+             trend="Trend",
+             dtrend=html("Deviation from trend"),
+             pdtrend=html("own trend"),
+             dtrendvsagi=html("AGI trend"),
+             trendshare=html("Trend as %<br>of AGI trend"),
+             volshare=html("Deviation as %<br>of AGI deviation")) %>%
+  tab_spanner(
+        label = "Amount in $ billions",
+        columns = c(value, trend, dtrend)
+        ) %>%
+  tab_spanner(
+        label = "Deviation from own trend as % of:",
+        columns = c(pdtrend, dtrendvsagi)
+        ) %>%
+  cols_align(
+    align = c("left"),
+    columns = namef) %>%
+  fmt_number(
+    columns=c(value, trend, dtrend),
+    scale_by = 1e-3,
+    decimals=0
+  ) %>%
+  fmt_currency(
+    rows=1,
+    columns=c(value, trend, dtrend),
+    scale_by = 1e-3,
+    decimals=0
+  ) %>%
+  fmt_percent(
+    columns = c(pdtrend, dtrendvsagi, trendshare, volshare),
+    decimals = 1) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "grey95")
+      ),
+    locations = cells_body(
+      rows=is.even(1:nrow(tabdata))
+      )
+    )
+tab
+
+savetab("tab_agi2010")
+
+```
+
 
 
 ```{r fig_capgains_agi}
@@ -1845,7 +2013,7 @@ pdata <- volall %>%
   unnest(data)
 
 gtitle <- "State tax revenue year percent deviation from trend by tax type over 5 decades"
-gsubtitle <- "50 states pooled, box widths indicate IQR of % deviation from trend"
+gsubtitle <- "50 states pooled, box widths indicate interquartile range of % deviation from trend"
 p <- pdata %>%
   # mutate(period=factor(period, levels=unique(pdata$period))) %>%
   ggplot(aes(x=pdtrend, y=reorder(period, desc(period)))) +
@@ -1993,7 +2161,7 @@ pdata <- volrecs %>%
 count(pdata, recyear)
 
 gtitle <- "State tax revenue percent deviation from trend by tax type across 6 recessions"
-gsubtitle <- "50 states pooled, box widths indicate IQR of % deviation"
+gsubtitle <- "50 states pooled, box widths indicate interquartile range of % deviation"
 p <- pdata %>%
   # mutate(period=factor(period, levels=unique(pdata$period))) %>%
   ggplot(aes(x=pdtrend, y=reorder(recyear, desc(recyear)))) +
@@ -2020,6 +2188,49 @@ p
 savefig(basename="fig_pdtrend_recessions_taxtype_box", width=6, height=8, scale=1.25)
 
 ```
+
+
+```{r recession_nonrecession}
+
+rrange <- 3  # find all years within +/- rrange of a recession
+recyears <- recessions %>% 
+  select(year=rec_year) %>%
+  filter(year >= 1960) %>%
+  group_by(year) %>%
+  summarise(year=(year - rrange):(year + rrange), .groups="drop") %>%
+  mutate(recession=TRUE)
+recyears 
+
+rrange <- 2
+recyears <- recessions %>% 
+  select(year=rec_year) %>%
+  filter(year >= 1960) %>%
+  group_by(year) %>%
+  summarise(year=(year - rrange + 1):(year + rrange + 1), .groups="drop") %>%
+  mutate(recession=TRUE)
+
+recdata <- vbase %>%
+  filter(stabbr=="US",
+         realnom=="nominal",
+         name %in% taxnames$name) %>%
+  select(stabbr, name, realnom, year, pdtrend) %>%
+  left_join(recyears, by = "year") %>%
+  mutate(recession=ifelse(is.na(recession), FALSE, recession),
+         namef=factor(name, levels=taxnames$name, labels=taxnames$namef))
+recdata
+count(recdata, name, namef)
+
+recdata %>%
+  group_by(name, namef, recession) %>%
+  summarise(pdtrendiqr=IQR(pdtrend), .groups="drop") %>%
+  mutate(recession=ifelse(recession, "recession", "notrec")) %>%
+  pivot_wider(names_from = recession, values_from = pdtrendiqr) %>%
+  mutate(diff=recession - notrec,
+         ratio=recession / notrec)
+
+
+```
+
 
 # 5. HOW DO PORTFOLIOS OF TAXES AFFECT TOTAL REVENUE VOLATILITY?
 
@@ -2506,7 +2717,7 @@ pdata <- volall %>%
   unnest(data)
 
 gtitle <- "State tax revenue year over year growth rates by tax type over 5 decades"
-gsubtitle <- "50 states pooled, box widths indicate IQR of % change"
+gsubtitle <- "50 states pooled, box widths indicate interquartile range of % change"
 p <- pdata %>%
   # mutate(period=factor(period, levels=unique(pdata$period))) %>%
   ggplot(aes(x=pch, y=reorder(period, desc(period)))) +
@@ -5422,7 +5633,7 @@ pdata <- volrecs %>%
 count(pdata, recyear)
 
 gtitle <- "State tax revenue year over year growth rates by tax type across 6 recessions"
-gsubtitle <- "50 states pooled, box widths indicate IQR of % change"
+gsubtitle <- "50 states pooled, box widths indicate interquartile range of % change"
 p <- pdata %>%
   # mutate(period=factor(period, levels=unique(pdata$period))) %>%
   ggplot(aes(x=pch, y=reorder(recyear, desc(recyear)))) +
