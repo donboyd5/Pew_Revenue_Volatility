@@ -38,7 +38,7 @@ source(here::here("r", "libs_ts.r"))
 # examine, look for conflicts
 devtools::session_info()
 # devtools::package_info()
-tidyverse_conflicts()
+tidyverse_conflicts() # simply informational
 
 
 # get functions -----------------------------------------------------------
@@ -110,6 +110,17 @@ source(here::here("r", "data_prep_subs", "sub_econ_national.r")) # needs sfy_sta
 # load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
 
 
+# cigxmq.rds -----------------------------------------------------
+# create cigxmq, to be used in the recessions features step
+# c: consumption 
+# i: investment
+# g: government
+# xm: exports minus imports
+# q -- all of these data are quarterly
+source(here::here("r", "data_prep_subs", "sub_cigxmq.r"))
+# cigxmq <- readRDS(here::here("data", "details", "cigxmq.rds"))  # check
+
+
 # recession_features.RData -----------------------------------------------------
 # inputs:  BEAData::nipa
 #          bdata::recessions
@@ -133,18 +144,33 @@ source(here::here("r", "data_prep_subs", "sub_censustax.r"))
 #   data/details/census_clean_tax.rds
 
 # This next step must be done AFTER censustax because censustax is an input
+# NOTE: The current report draft does not use rate-adjusted data, created in the
+# next step, so you can skip review of this step if you want.
+# The step involves the 3 programs immediately below.
+# It constructs rate-adjusted versions of state income and sales taxes
+# Not used in the report so far but keep it because there is a chance of using it.
+# First, get the income and sales tax rates
+source(here::here("r", "data_prep_subs", "sub_get_income_tax_rates.r"))
+source(here::here("r", "data_prep_subs", "sub_get_sales_tax_rates.r"))
 source(here::here("r", "data_prep_subs", "sub_censustax_rateadjust.r"))
 # inputs: data/details/censustax.rds
 # outputs: data/details/census_gstiitadj.rds
 
+# This next step prepares data Pew once developed on tax rate and base changes.
+# It is not used in the current draft so you can skip review if you want.
 source(here::here("r", "data_prep_subs", "sub_pewtax.r"))
 # inputs: data/details/census_clean_tax.rds
 # outputs: data/details/pewtax.rds
 
+
+# This next step prepares a data obtained from TPC on how they mapped state sales
+# tax bases to NIPA consumption data.
+# It is not used in the current draft so you can skip review if you want.
 source(here::here("r", "data_prep_subs", "sub_gstbase.r"))
 # inputs: TPC data
 # outputs: data/details/gstbase_details.rds, data/details/gstbase.rds
 
+#.. bundle the various state-tax related files into a single Rdata file ----
 source(here::here("r", "data_prep_subs", "sub_taxdata.r"))
 # inputs: in data/details:
 #   censustax.rds
@@ -152,29 +178,5 @@ source(here::here("r", "data_prep_subs", "sub_taxdata.r"))
 #   pewtax.rds
 #   gstbase.rds
 # outputs:  data/taxdata.RData
-load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
-
-
-# do a quick check to make sure the shares add approximately to 1
-# sharesums <- taxshares %>%
-#   select(-tottax) %>%
-#   pivot_longer(-c(stabbr, year)) %>%
-#   group_by(stabbr, year) %>%
-#   summarise(sum=sum(value), .groups="drop")
-# all.equal(sharesums$sum, rep(1, nrow(sharesums)))  # checks whether the sums==1, within a tolerance
-# quantile(sharesums$sum)
-# sharesums %>% filter(sum < .99)  # we have 19 that are < .99; CO 2019 is the only concerning one
-# rm(sharesums)
-
-
-# load data -- only for testing purposes -----------------------------
-# DO NOT RUN UNTIL AFTER FILES HAVE BEEN CREATED
-# useful for verifying that what's in each file is what's intended
-load(file = here::here("data", "general.RData"), verbose=TRUE)
-load(file = here::here("data", "econ_national.RData"), verbose=TRUE)
-load(file = here::here("data", "recession_features.RData"), verbose=TRUE)
-load(file=here::here("data", "capgainsagi.RData"), verbose=TRUE)
-# load(file = here::here("data", "econ_state.RData"), verbose=TRUE)
-load(file = here::here("data", "gdp_state.RData"), verbose=TRUE)
 load(file = here::here("data", "taxdata.RData"), verbose=TRUE)
 

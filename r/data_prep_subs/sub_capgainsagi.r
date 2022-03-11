@@ -2,12 +2,12 @@
 
 # National capital gains --------------------------------------------------
 # historical capital gains for the U.S., annual, calendar (tax) year
-# primary sourdces are U.S. Treasury for data before 1995, and CBO for 1995+
+# primary sources are U.S. Treasury for data before 1995, and CBO for 1995+
 # note that ~ 2020+ is CBO forecasts
 # see spreadsheet for further details on sources
 fn <- "NationalCapitalGains.xlsx"
 sheet <- "CapGains"
-capgains1 <- read_excel(here::here("raw_data", "soi", fn), sheet=sheet, range="A5:B83", 
+capgains1 <- read_excel(here::here("data", "raw_data", "soi", fn), sheet=sheet, range="A5:B83", 
                        col_types = c())
 
 capgains2 <- capgains1 %>%
@@ -23,12 +23,12 @@ capgains <- capgains2 %>%
 # create agi time series directly from IRS data -----------------------------------------
 # This is agi only not its components
 # $ billions
-agi1 <- read_excel(here::here("raw_data", "soi", "histab6.xls"),
+agi1 <- read_excel(here::here("data", "raw_data", "soi", "histab6.xls"),
                    col_names = c("year", "aginipa", "agi"),
                    range="A7:C62")
 
 # $ thousands
-agi2 <- read_excel(here::here("raw_data", "soi", "19intaba.xls"),
+agi2 <- read_excel(here::here("data", "raw_data", "soi", "19intaba.xls"),
                    range="A4:AE117")
 agi2a <- agi2 %>%
   filter(row_number() == 113)
@@ -60,21 +60,16 @@ agi <- agi3 %>%
   filter(keep) %>%
   select(-keep)
 
-# saveRDS(agi, here::here("raw_data", "soi", "agi.rds"))
+# saveRDS(agi, here::here("data", "raw_data", "soi", "agi.rds"))
 # rm(agi1, agi2, agi2a, agi2b, agi3)
 
 
 # agi data from TPC -------------------------------------------------------
 # TPC is the Urban-Brookings Tax Policy Center
-# dsoi <- r"(E:\data\soi)"
-dsoi <- here::here("raw_data", "tpc")
+# data were previously downloaded and saved in sub_ONETIME_downloads.r
+dsoi <- here::here("data", "raw_data", "tpc")
 fn <- "historical_source_0.xlsx"
 fpath <- file.path(dsoi, fn)
-
-#.. ONETIME: download the TPC agi data ----
-# url <- "https://www.taxpolicycenter.org/file/185517/download?token=cYMr2RRH"
-# download.file(url, fpath, mode="wb")
-#.. END DOWNLOAD ----
 
 vnames <- c("year", "nret", "agi", "wages", "interest", "dividends",
             "busincnet", "netcgll", "incother", "taxbc", "taxliab", "amt")
@@ -100,7 +95,5 @@ count(agitpc, name)
 # save data ---------------------------------------------------------------
 save(capgains, agi, agitpc,
      file = here::here("data", "capgainsagi.RData"))
-
-
 
 

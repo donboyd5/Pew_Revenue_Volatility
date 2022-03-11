@@ -3,6 +3,14 @@
 
 # inputs:
 #   bdata::recessions
+#   capgains from previously created capgainsagi.RData
+#   cigxmq, previously created
+#   unrate, previously created
+
+# load required data
+load(file=here::here("data", "capgainsagi.RData"), verbose=TRUE)
+cigxmq <- readRDS(here::here("data", "details", "cigxmq.rds"))
+unrate <- readRDS(here::here("data", "raw_data", "bls", "unrate.rds"))
 
 
 # package bdata has NBER recession dates
@@ -20,7 +28,7 @@
 firstdate <- as.Date("1947-01-01")  # min(cigxm1$date)
 lastdate <- as.Date("2022-07-01") # max(cigxm1$date) + years(1) # allow an extra year
 
-ptrecs <- bdata::recessions %>%
+ptrecs <- bdata::recessions %>%  # peak-trough records
   filter(!is.na(rec_year)) %>%
   select(rec_year, peak=peak_quarter, trough=trough_quarter) %>%
   pivot_longer(-c(rec_year), names_to="qtype", values_to = "date")
@@ -80,7 +88,6 @@ rec_duration <- bdata::recessions %>%
 
 
 #.. real gdp (rgdp) and real personal consumtion (rpce) for each recession ----
-cigxmq <- readRDS(here::here("data", "details", "cigxmq.rds"))
 rec_nipa <- rec_peaktrough %>%
   left_join(cigxmq %>%
               filter(valtype=="chain", name %in% c("rgdp", "rpce")),
@@ -91,7 +98,6 @@ rec_nipa <- rec_peaktrough %>%
   select(recyear, name, pch) %>%
   pivot_wider(values_from = pch)
 
-unrate <- readRDS(here::here("raw_data", "bls", "unrate.rds"))
 rec_unrate1 <- unrate %>%
   arrange(date) %>%
   select(date, unrate=value) %>%
@@ -109,6 +115,7 @@ rec_unrate <- rec_unrate1 %>%
   pivot_wider(names_from = qtype) %>%
   mutate(urchange=trough - peak)
 
+
 # cap gains
 rec_cg <- capgains %>%
   arrange(year) %>%
@@ -122,6 +129,7 @@ rec_cg <- capgains %>%
          cgpch=cgminpost / cgmaxpre - 1) %>%
   filter(year %in% rec_duration$recyear)
 rec_cg
+
 
 # combine the recession files
 rec_features <- rec_duration %>%

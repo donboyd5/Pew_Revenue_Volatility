@@ -1,11 +1,15 @@
+
 # ECON_STATE -- create econ_state.RData ----
+
+load(file = here::here("data", "general.RData"), verbose=TRUE)
+
 
 #.. BEA state GDP data, fiscal year basis; total, no details by industry ----
 # data(package="BEAData")
 # glimpse(sgdp.q)
 # summary(sgdp.q)  # starts in 2005-01-01 so this will not be good
-summary(sgdp.a) # 1997-2020, only a bit better
-summary(sgdp_spliced.a)  # 1963-2020 -- good; my spliced SIC and NAICS data
+summary(BEAData::sgdp.a) # 1997-2020, only a bit better
+summary(BEAData::sgdp_spliced.a)  # 1963-2020 -- good; my spliced SIC and NAICS data
 count(sgdp_spliced.a, name) # gdp and rgdp
 
 sgdpfy1 <- sgdp_spliced.a %>%
@@ -32,7 +36,7 @@ summary(sgdpfy) # 1964-2020
 # SQGDP11" Name="Contributions to percent change in real GDP", sector
 # thus we want SQGDP9
 
-# dir <- here::here("raw_data", "bea", "/")
+beadir <- here::here("data", "raw_data", "bea")
 afiles <- unzip(file.path(beadir, "SAGDP.zip"), list=TRUE)  # annual
 qfiles <- unzip(file.path(beadir, "SQGDP.zip"), list=TRUE) # quarterly
 

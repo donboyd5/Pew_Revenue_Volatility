@@ -20,7 +20,7 @@ output:
 
 3.  Check the setup
 
-4.  Data preparation - step through each of the following, line by line
+4.  Data preparation - step through each of the following programs, in the `r` folder, line by line
 
     1.  Run `prep_data.r` to prepare many individual files
 
@@ -28,14 +28,23 @@ output:
 
     3.  Run `prep_vol.r` to prepare summary volatility estimates by state, tax, and time period
 
-5.  Run `Pew_Tax_Revenue_Volatility.rmd` chunk by chunk
+5.  Run `Pew_Tax_Revenue_Volatility.rmd` chunk by chunk.
+
+    1.  It should produce figures (including map) and tables in approximately the order they appear in the report.
+
+    2.  The filenames for png and csv files will match those given in the endnote to each figure or table caption.
+
+# CAUTION
+
+I have included in this project all of the data needed for the report. If you use the included data you should be able to match exactly the figures and tables in the report.
+
+However, I also provide tools that created the included data files. These tools consist of (1) packages I created that get and parse data from the internet, and (2) code that downloads files from the Internet. (I have commented-out the download code to reduce the chance of running it accidentally.)
+
+Because some of the data are from federal agencies that periodically revise their data, if you use these tools to create your own versions of the data files I include in the project, you may end up using data that have been revised and are very slightly different from my included.
 
 # System setup
 
--   make sure that you can find in the share drive
-    -   the project directory `Pew_Revenue_Volatility`
-
-    -   the data directory `data`
+-   make sure that you can find in the share drive the project directory `Pew_Revenue_Volatility`
 -   make sure you have:
     -   R version 4.1.2 or later installed
 

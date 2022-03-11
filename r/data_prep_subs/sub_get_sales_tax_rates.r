@@ -1,9 +1,17 @@
 
+# Create state-year datbase of sales tax rate, combining information on
+# sales tax rates from:
+#     TPC: the Brookings-Urban Tax Policy Center;
+#          TPC tax-rate data used here were downloaded in sub_ONETIME_downloads.r
+#          they are in an excel file that is read below
+#     CSPP: The Correlates of State Policy Project database 
+#          data are in the CRAN package csppData, accessed through the CRAN
+#          package csppData
 
 
-# TPC database of sales tax rates ----
-url <- "https://www.taxpolicycenter.org/file/186569/download?token=cO82Ddqm"
-fn <- "state_sales_tax_2.xlsx"
+library(cspp)
+
+# get TPC sales tax rates -------------------------------------------------
 
 f <- function(year){
   print(year)
@@ -20,7 +28,8 @@ f <- function(year){
     cols <- cell_cols("B:D")
     cnames <- c("stname", "junk", "srate")
   }
-  df <- read_excel(here::here("raw_data", "tpc", fn), sheet=as.character(year),
+  # read from TPC Excel file with sales tax rates
+  df <- read_excel(here::here("data", "raw_data", "tpc", "state_sales_tax_2.xlsx"), sheet=as.character(year),
                    range=cols, col_names=cnames, col_types="text")
   df %>%
     select(stname, srate) %>% 
@@ -105,9 +114,8 @@ summary(gst_rates_tpc)
 saveRDS(gst_rates_tpc, here::here("data", "details", "gst_rates_tpc.rds"))
 
 
-# get rates from the cspp ----
-library(csppData)
-all_variables <- get_var_info()
+# get CSPP rate data ----
+all_variables <- cspp::get_var_info()
 all_variables %>%
   filter(str_detect(long_desc, pattern=coll("tax", ignore_case=TRUE))) %>%
   filter(str_detect(long_desc, pattern=coll("rate", ignore_case=TRUE))) %>%
@@ -123,19 +131,24 @@ glimpse(tmp)
 
 # Full dataset
 all_data <- get_cspp_data()
+glimpse(all_data)
+# check <- ns(all_data)
+# str_subset(check, "st")
+# all_data %>% select(st, st_ec, st_soc, state)
 
 df <- all_data %>%
-  select(stabbr=st.abb, year, gstrate=x_sales_taxes)
-summary(df)  # 1900-2019 w/2586 NAs
-summary(df %>% filter(!is.na(x_sales_taxes)))  # 1946-2019
+  select(stabbr=st, year, gstrate=x_sales_taxes)
+summary(df)  # 1900-2020 w/2614 NAs
+summary(df %>% filter(!is.na(gstrate)))  # 1946-2019
 
+# in one version of cspp there were duplicate records
+# they appear to have fixed that, but the code below makes sure we only have one
 # do we have any cases with more than one record per state per year?
 df %>%
   group_by(stabbr, year) %>%
   mutate(n=n()) %>%
   ungroup %>%
   filter(n > 1)
-# there are duplicate records - hopefully none with different rates
 
 df2 <- df %>%
   distinct() %>%
@@ -146,10 +159,9 @@ df2 %>%
   mutate(n=n()) %>%
   ungroup %>%
   filter(n > 1)
-# good, no dups, so they must have had the same rates
+# good, no dups
 
-
-df2 %>% filter(stabbr=="NY")
+df2 %>% filter(stabbr=="NY") # sanity check
 
 df3 <- expand.grid(stabbr=unique(df2$stabbr), year=min(df$year):max(df$year)) %>%
   left_join(df2, by=c("stabbr", "year")) %>%

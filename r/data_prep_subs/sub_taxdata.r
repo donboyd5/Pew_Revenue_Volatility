@@ -1,6 +1,5 @@
 
 ## assemble and save taxdata ----
-# censustax <- readRDS(here::here("data", "details", "census_clean_tax.rds"))
 censustax <- readRDS(here::here("data", "details", "census_keeptax.rds"))
 census_gstiitadj <- readRDS(here::here("data", "details", "census_gstiitadj.rds"))
 pewtax <- readRDS(here::here("data", "details", "pewtax.rds"))

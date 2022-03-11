@@ -61,7 +61,7 @@ library(modelr)
 # miscellaneous ----
 # devtools::install_github("correlatesstatepolicy/cspp")
 # library(cspp)
-library(csppData)
+# library(csppData)
 
 
 # FRED ----

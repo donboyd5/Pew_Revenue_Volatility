@@ -18,7 +18,7 @@
 # fnames <- c("", "", "")
 
 
-xlfn <- here::here("raw_data", "pew", "Boyd Data Request 100815.xlsx")
+xlfn <- here::here("data", "raw_data", "pew", "Boyd Data Request 100815.xlsx")
 sheets <- excel_sheets(xlfn)
 sheets
 
