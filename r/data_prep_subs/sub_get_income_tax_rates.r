@@ -10,7 +10,8 @@
 # libraries ----
 
 source(here::here("r", "libs_base.r"))
-source(here::here("r", "functions.r"))
+library(cspp)
+# source(here::here("r", "functions.r"))
 
 # Part A: NBER 1977-2018 ----
 # https://users.nber.org/~taxsim/state-rates/

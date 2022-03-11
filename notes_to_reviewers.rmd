@@ -14,70 +14,59 @@ output:
 
 # Overview
 
-1.  Set your system up
+1.  CAUTIONS
 
-2.  Set the RStudio `Pew_Revenue_Volatility` project up
+2.  Set your system up
 
-3.  Check the setup
+3.  Set the RStudio `Pew_Revenue_Volatility` project up
 
-4.  Data preparation - step through each of the following programs, in the `r` folder, line by line
+4.  Check the setup
 
-    1.  Run `prep_data.r` to prepare many individual files
+5.  Data preparation - step through each of the following programs, in the `r` folder, line by line
 
-    2.  Run `prep_vbase.r` to prepare the main state-tax-year data file, vbase
+6.  Run `Pew_Tax_Revenue_Volatility.rmd` chunk by chunk.
 
-    3.  Run `prep_vol.r` to prepare summary volatility estimates by state, tax, and time period
+# CAUTIONS
 
-5.  Run `Pew_Tax_Revenue_Volatility.rmd` chunk by chunk.
+1.  Downloading data (or not)
 
-    1.  It should produce figures (including map) and tables in approximately the order they appear in the report.
+-   I have included in this project all of the data needed for the report. If you use the included data you should be able to match exactly the figures and tables in the report.
 
-    2.  The filenames for png and csv files will match those given in the endnote to each figure or table caption.
+-   However, I also provide tools that created the included data files. These tools consist of (1) packages I created that get and parse data from the internet, and (2) code that downloads files from the Internet. (I have commented-out the download code to reduce the chance of running it accidentally.)
 
-# CAUTION
+-   Because some of the data are from federal agencies that periodically revise their data, if you use these tools to create your own versions of the data files I include in the project, you may end up using data that have been revised and are very slightly different from my included.
 
-I have included in this project all of the data needed for the report. If you use the included data you should be able to match exactly the figures and tables in the report.
+2.  Downloading data (or not)
 
-However, I also provide tools that created the included data files. These tools consist of (1) packages I created that get and parse data from the internet, and (2) code that downloads files from the Internet. (I have commented-out the download code to reduce the chance of running it accidentally.)
+-   You will see some files not needed in the project, usually in folders named "archive"
 
-Because some of the data are from federal agencies that periodically revise their data, if you use these tools to create your own versions of the data files I include in the project, you may end up using data that have been revised and are very slightly different from my included.
+-   You can ignore these. They are things I didn't want to delete.
 
 # System setup
 
 -   make sure that you can find in the share drive the project directory `Pew_Revenue_Volatility`
+
 -   make sure you have:
+
     -   R version 4.1.2 or later installed
 
     -   a recent version of RStudio installed
 
     -   if any troubles, please email [me](mailto:donboyd5@gmail.com)
+
 -   copy the entire project directory `Pew_Revenue_Volatility` from the share drive to your machine
--   using a text editor, open `constants_system.r` (it is in the `r` folder of the project) - **(I recommend doing this with a text editor at this point, rather than opening it in RStudio, as that will trigger actions you might rather not have happen yet - nothing fatal, but you'll be waiting for those actions to end before you can proceed)**
-    -   you will see my system-specific information:
 
-        -   global directory names mapped to folder locations on my computer
+# Optional step: FRED api key
 
-        -   my FRED API key
+-   I created `constants_system.r` to isolate all system-specific information in one place, but I have since streamlined the project so that everything is in the project directory (or subfolder) so you should not have to worry about this
 
-    -   modify `constants_system.r` by commenting-out my system-specific information and putting yours in
+-   if you don't plan to download unemployment rate data from FRED, you do not need to do the step in the next bullet (or you can decide later, and at that point take the action in the next step)
 
-        -   map directories on your computer, with whatever names you want, to the global variables in `constants_system.r`; as of this writing, the global variables are `beadir`, `qcewdir`, and `scratchdir` but there could be more or different global variables by the time you read this
+-   IF you want to download the unemployment rate data from FRED, then
 
-        -   if you don't have a FRED API key you can either keep mine uncommented in the `constants_system.r` file or put in any old string in
+    -   using a text editor, open `constants_system.r` (it is in the `r` folder of the project) - **(I recommend doing this with a text editor at this point, rather than opening it in RStudio, as that will trigger actions you might rather not have happen yet - nothing fatal, but you'll be waiting for those actions to end before you can proceed)**
 
-            -   I have preloaded certain data from FRED (Federal Reserve Economic Data) and stored it in the project (just the unemployment rate, I think) and commented-out the download code, so you don't need the FRED key unless you decide to download that data yourself
-
-            -   if you do so, you can use my key or use your own
-
-            -   if you do so you may get slightly different numbers than me, if the data have been revised since I downloaded them
--   copy data from the share drive `data` subdirectories to the directories you are using (the directories you named in `constants_system.r`)
-    -   if your review requires you to go to the original source of these files:
-
-        -   I'd suggest you do that after first running things using the data I downloaded and put in these directories
-
-        -   then, if you want to download from source, in the \`prep_data.r\` program you will see commented-out code that downloads files I used
-
-        -   however because data can be revised this may lead to different results from mine; I would expect the differences to be miniscule
+    -   insert your FRED api key in the place noted in the file
 
 # Project setup
 
@@ -87,7 +76,7 @@ Because some of the data are from federal agencies that periodically revise thei
 
 -   wait for it to finish examining the packages the project uses
 
-    -   when I did this to verify that I can transfer from one computer of mine to another it gave me warnings about `DESCRIPTION` files missing from 9 packages
+    -   when I did this to verify that I can transfer from one computer of mine to another it gave me numerous warnings about `DESCRIPTION` files missing; it appears to be a small non-damaging bug in the `renv` package and nothing to worry about
 
     -   I went ahead with the next step anyway and all worked
 
@@ -95,7 +84,7 @@ Because some of the data are from federal agencies that periodically revise thei
 
     -   wait for it to finish installing packages; it will take a while
 
-    -   this, too, gave me warnings, noting that `DESCRIPTION` files were missing for the packages `cluster`, `KernSmooth`, and `codetools`
+    -   this, too, gave me warnings, noting that `DESCRIPTION` files were missing for several packages; this, too, appears to be a non-damaging bug
 
 -   assuming all good, proceed to "Check the setup"
 
@@ -127,42 +116,56 @@ Because some of the data are from federal agencies that periodically revise thei
 
 # Data preparation
 
--   open `prep_data.r` in the `r` project folder
+1.  open `prep_data.r` (it is in the `r` project folder)
+
+    -   the primary purposes of this program are to
+
+        -   retrieve raw data
+
+        -   clean it up
+
+        -   and, in most cases, bundle files in a similar category into a single Rdata file (for example, several national economic data files are bundled into a national economy Rdata file); in a few cases, it also saves separate rds files
 
     -   you'll see my notes about how to navigate the code efficiently
 
-    -   the program loads subprograms to accomplish major tasks
+    -   the program loads subprograms to accomplish major tasks; in general you'll want to open the sub programs and step through them line by line
 
-        -   gather, organize and save major categories of data
+    -   **there is one special sub program that I recommend you do not run: sub_ONETIME_downloads.r**
 
-        -   "stack" the separate data files
+    -   This program downloads original source data and saves it in project directories. If you run this you will overwrite files that are in directories now. If the source agencies have changed those files, you may end up with data different than what I have used.
 
-        -   construct volatility measures
+2.  `prep_vbase.r` prepares and saves the main state-tax-year data file, vbase
 
-    -   the major gathering, organizing, and saving tasks are
+    -   best to run it line by line
 
-        -   general data
+    -   it loads some of the previously created files
 
-        -   capital gains and agi data
+    -   puts them into a common format
 
-        -   national economic data
+    -   "stacks" the separate data files into one long file
 
-        -   state gdp data
+    -   creates inflation-adjusted versions of certain data
 
-        -   tax data
+    -   constructs certain observation-specific (year-state-variable-real/nominal) transformations such as percent change from prior year, trend value, and percent deviation from trend
 
-    -   step through the program bit by bit - do not try to run it all at once (although that will work, if your goal is to look at the final result)
+    -   construct volatility measures
 
-    -   this will create the RData files needed for the analysis program
+3.  `prep_vol.r` prepares and saves files with summary volatility estimates by state, variable, and time period
 
--   
+    -   for example, the interquartile range of the percentage deviation from trend for selected variables, by decade
+
+    -   step through the program line by line
 
 # Analysis
 
--   open Pew_Tax_Volatility.rmd
+-   open `Pew_Tax_Volatility.rmd`
 
 -   step through the chunks one at a time
 
 -   this will produce all of the figures, maps, and tables in the report
+
+    -   It should produce figures (including map) and tables in approximately the order they appear in the report.
+
+    -   The filenames for png and csv files will match those given in the endnote to each figure or table caption.
 
 -   and will calculate and print certain facts that are inline in the report text

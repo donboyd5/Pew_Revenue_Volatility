@@ -21,15 +21,18 @@ editor_options:
 # PROJECT MANAGEMENT
 
 ```{r runall, eval=FALSE, echo=FALSE}
+# Pew folks - please pay no attention to this chunk.
+
 # When we want a final report, run the following code selectively "by hand" (interactively)
 # -- NEVER using Knit with eval=TRUE
 # note <br> breaks line for html output but \n should break for pdf; also could try |
 
-rmdfn <- "./Pew_Tax_Revenue_Volatility.rmd" # this file
-outfn <- paste0("tax_volatility_", format(Sys.time(), "%Y-%m-%d"), ".html")
-rmarkdown::render(rmdfn, output_format="html_document", output_file=outfn)
+# uncomment these next 3 lines
+# rmdfn <- "./Pew_Tax_Revenue_Volatility.rmd" # this file
+# outfn <- paste0("tax_volatility_", format(Sys.time(), "%Y-%m-%d"), ".html")
+# rmarkdown::render(rmdfn, output_format="html_document", output_file=outfn)
 
-# library("RCurl")
+# library(RCurl)
 # ftpUpload(outfn, "ftp://kffrig:boyd4812@files.000webhost.com/public_html/KFF_RIG_MedicaidCuts_new.html")
 
 # Note may be safest to fully exit RStudio and restart it before running whole thing. Otherwise knitr may get confused
@@ -42,7 +45,7 @@ Note: The following list of figures and maps, and the list of tables, are in the
 
 Boyd_StateTaxRevenueVolatility_Report_2022_2022-03-08.docx 
 
-However, the actual figure numbering in that document does not match the numbering below because I forgot to force an update to that numbering before I submitted the document. If you force renumbering in the Word doc (ctrl-A, then F9), its new numbering will match what you see below.
+However, the actual figure and table numbering in that document does not match the numbering below because I forgot to force an update of numbering before I submitted the document. If you force renumbering in the Word doc (ctrl-A, then F9), its new numbering will match what you see below.
 
 In the code below I have tried to make each figure and table appear in the order in which they appear in the Word doc, but they may not be perfectly synchronized.
 
