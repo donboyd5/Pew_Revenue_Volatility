@@ -144,6 +144,7 @@ ylist <- list(
 volall <- map_dfr(ylist, f_vol, vars=volvars, vbase=vbase)
 saveRDS(volall, here::here("data", "volall.rds"))
 
+
 glimpse(volall)
 count(volall, period)
 count(volall, stabbr)
@@ -151,6 +152,58 @@ count(volall, name, namef)
 count(volall, realnom)
 
 volall %>% filter(stabbr=="US", name=="tottax", realnom=="nominal")
+
+# the pew adjustments and volatility
+pewbase <- vbase %>% filter(realnom=="nominal", year %in% 1995:2014)
+pewvol <- map_dfr(list(c(1995, 2014)), 
+                 f_vol, 
+                 vars=c("iit", "iitpew", "gst", "gstpew"),
+                 vbase=pewbase)
+
+pewvol %>%
+  select(stabbr, name, pdtrendiqr) %>%
+  pivot_wider(values_from = pdtrendiqr) %>%
+  ggplot(aes(iit, iitpew, label=stabbr)) +
+  geom_point() +
+  geom_text() +
+  geom_abline(slope=1, intercept=0)
+
+pewvol %>%
+  select(stabbr, name, pdtrendiqr) %>%
+  pivot_wider(values_from = pdtrendiqr) %>%
+  ggplot(aes(gst, gstpew, label=stabbr)) +
+  geom_point() +
+  geom_text() +
+  geom_abline(slope=1, intercept=0)
+  
+  
+pewvol %>%
+  select(stabbr, name, pdtrendiqr) %>%
+  filter(!is.na(pdtrendiqr)) %>%
+  group_by(name) %>%
+  arrange(pdtrendiqr) %>%
+  mutate(rank=row_number()) %>%
+  select(-pdtrendiqr) %>%
+  pivot_wider(values_from = rank) %>%
+  ggplot(aes(iit, iitpew, label=stabbr)) +
+  geom_point() +
+  geom_text() +
+  geom_abline(slope=1, intercept=0)
+
+pewvol %>%
+  select(stabbr, name, pdtrendiqr) %>%
+  filter(!is.na(pdtrendiqr)) %>%
+  group_by(name) %>%
+  arrange(pdtrendiqr) %>%
+  mutate(rank=row_number()) %>%
+  select(-pdtrendiqr) %>%
+  pivot_wider(values_from = rank) %>%
+  ggplot(aes(gst, gstpew, label=stabbr)) +
+  geom_point() +
+  geom_text() +
+  geom_abline(slope=1, intercept=0)
+
+# income components
 
 
 
